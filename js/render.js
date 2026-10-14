@@ -7,12 +7,6 @@ function applyColor(node, color) {
   node.style.setProperty('--marker-ink', readableText(color));
 }
 
-function renderDot(settlement) {
-  const dot = h('span', { class: 'dot' }, String(settlement.number ?? ''));
-  applyColor(dot, settlement.color);
-  return dot;
-}
-
 function renderTags(tags) {
   if (!tags || !tags.length) return null;
   return h('ul', { class: 'tags' }, tags.map((tag) => h('li', {}, tag)));
@@ -129,62 +123,6 @@ export function renderEntries(items, emptyText, onSelect) {
   );
 }
 
-/* ---------- Карта ---------- */
-
-export function renderMap(settlements, settings, onSelect) {
-  const markers = settlements.map((s) => {
-    const marker = h(
-      'button',
-      {
-        type: 'button',
-        class: 'marker',
-        'aria-label': `${s.number ?? ''}. ${s.name}`,
-        dataset: { settlement: String(s.id) },
-      },
-      String(s.number ?? '')
-    );
-    if (s.x != null) marker.style.left = `${s.x}%`;
-    if (s.y != null) marker.style.top = `${s.y}%`;
-    applyColor(marker, s.color);
-    marker.addEventListener('click', () => onSelect(s, marker));
-    return marker;
-  });
-
-  const legend = settlements.map((s) =>
-    h(
-      'li',
-      {},
-      h(
-        'button',
-        {
-          type: 'button',
-          class: 'legend-item',
-          dataset: { settlement: String(s.id) },
-          onClick: (event) => onSelect(s, event.currentTarget),
-        },
-        renderDot(s),
-        s.name
-      )
-    )
-  );
-
-  return h(
-    'div',
-    { class: 'map' },
-    h(
-      'div',
-      { class: 'map-stage' },
-      h('img', {
-        class: 'map-image',
-        src: settings.mapImage,
-        alt: settings.mapAlt,
-        draggable: 'false',
-      }),
-      markers
-    ),
-    h('ul', { class: 'map-legend' }, legend)
-  );
-}
 
 /* ---------- Универсальный бланк записи ---------- */
 

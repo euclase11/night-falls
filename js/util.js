@@ -42,3 +42,9 @@ export function readableText(hex) {
   const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
   return luminance > 0.6 ? '#14121c' : '#ffffff';
 }
+
+export function applyColor(node, color) {
+  if (!color) return;
+  node.style.setProperty('--marker-color', color);
+  node.style.setProperty('--marker-ink', readableText(color));
+}

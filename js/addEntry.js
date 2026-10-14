@@ -13,13 +13,13 @@ const openBtn = document.getElementById('open-entry-form');
 
 let isLoggedIn = false;
 
-/** Какой тип формы соответствует текущей вкладке. */
+/* ---------- Привязка формы к вкладке ---------- */
+
 function formKeyForTab(tabId) {
   switch (tabId) {
     case 'characters': return 'characters';
     case 'timeline':   return 'events';
     case 'map':        return 'settlements';
-    // 'other' — форма не показывается, добавлять можно на соответствующих вкладках
     default: return null;
   }
 }
@@ -30,7 +30,7 @@ function currentTabId() {
 
 /* ---------- Рендер полей ---------- */
 
-function renderField(field) {
+function renderField(field, prefill = {}) {
   const wrapper = document.createElement('label');
   wrapper.textContent = field.label;
 
@@ -62,6 +62,13 @@ function renderField(field) {
     case 'number':
       input = document.createElement('input');
       input.type = 'number';
+      input.step = field.step ?? 'any';
+      break;
+
+    case 'color':
+      input = document.createElement('input');
+      input.type = 'color';
+      if (!field.default) input.value = '#ff5555';
       break;
 
     default:
@@ -75,13 +82,18 @@ function renderField(field) {
   if (field.maxLength) input.maxLength = field.maxLength;
   if (field.placeholder) input.placeholder = field.placeholder;
 
+  // Предзаполнение
+  if (prefill[field.name] != null) {
+    input.value = prefill[field.name];
+  }
+
   wrapper.append(input);
   return wrapper;
 }
 
-function renderForm(config) {
+function renderForm(config, prefill = {}) {
   titleEl.textContent = config.title;
-  fieldsEl.replaceChildren(...config.fields.map(renderField));
+  fieldsEl.replaceChildren(...config.fields.map((f) => renderField(f, prefill)));
 }
 
 function collectValues(config) {
@@ -106,18 +118,20 @@ function updateButtonVisibility() {
   if (!shouldShow && !section.hidden) closeForm();
 }
 
-/* ---------- Открыть/закрыть ---------- */
+/* ---------- Открытие/закрытие ---------- */
 
-function openForm() {
-  const key = formKeyForTab(currentTabId());
-  const config = key ? FORMS[key] : null;
+export function openForm(key, prefill = {}) {
+  const config = FORMS[key];
   if (!config) return;
 
-  renderForm(config);
+  renderForm(config, prefill);
   section.hidden = false;
   openBtn.hidden = true;
   clearMessage();
   fieldsEl.querySelector('input, textarea, select')?.focus();
+
+  // Прокрутим к форме, если её не видно
+  section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function closeForm() {
@@ -152,13 +166,14 @@ supabase.auth.onAuthStateChange((_event, session) => {
   updateButtonVisibility();
 });
 
-/* ---------- Смена вкладки ---------- */
-
 window.addEventListener('hashchange', updateButtonVisibility);
 
 /* ---------- Кнопки ---------- */
 
-openBtn?.addEventListener('click', openForm);
+openBtn?.addEventListener('click', () => {
+  const key = formKeyForTab(currentTabId());
+  if (key) openForm(key);
+});
 cancelBtn?.addEventListener('click', closeForm);
 
 /* ---------- Отправка ---------- */
@@ -186,7 +201,6 @@ formEl?.addEventListener('submit', async (e) => {
 
     setTimeout(() => {
       closeForm();
-      // app.js слушает это событие и перерисовывает активную вкладку
       document.dispatchEvent(new CustomEvent('data:updated', { detail: { table: config.table } }));
     }, 800);
 

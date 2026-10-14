@@ -849,3 +849,176 @@ body[data-world="afterlife"] .timeline-item.is-clickable.is-active {
     animation: none;
   }
 }
+
+/* ---------- Интерактивная карта ---------- */
+
+.map {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.map-viewport {
+  position: relative;
+  overflow: hidden;
+  height: 65vh;
+  min-height: 400px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: grab;
+  touch-action: none;
+}
+
+.map-viewport.is-panning {
+  cursor: grabbing;
+}
+
+.map-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform-origin: 0 0;
+  will-change: transform;
+  user-select: none;
+}
+
+.map-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+
+.marker {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: var(--marker-color);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  color: var(--marker-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.marker.is-active {
+  z-index: 2;
+  box-shadow: 0 0 0 3px var(--accent), 0 1px 4px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -50%) scale(1.25);
+}
+
+/* Управление зумом */
+.map-zoom {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.map-zoom button {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.1rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.map-zoom button:hover {
+  border-color: var(--accent);
+}
+
+/* Контекстное меню (ПКМ) */
+.map-menu {
+  position: fixed;
+  z-index: 100;
+  min-width: 12rem;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.map-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.map-menu-item:hover {
+  background: rgba(44, 110, 142, 0.12);
+}
+
+body[data-world="afterlife"] .map-menu-item:hover {
+  background: rgba(143, 209, 198, 0.15);
+}
+
+/* Легенда под картой */
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+}
+
+.legend-item.is-active {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.dot {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--marker-color);
+  color: var(--marker-ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Убедимся, что <input type="color"> выглядит адекватно */
+.add-form input[type="color"] {
+  width: 3.5rem;
+  height: 2.2rem;
+  padding: 0.15rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+}

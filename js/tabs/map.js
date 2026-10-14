@@ -1,7 +1,7 @@
 // js/tabs/map.js
 import { config } from '../config.js';
 import { store } from '../store.js';
-import { renderMap } from '../render.js';
+import { createMapView } from '../map.js';
 
 export const mapTab = {
   id: 'map',
@@ -14,6 +14,8 @@ export const mapTab = {
   },
 
   render(items, _emptyText, ctx) {
-    return renderMap(items, config, ctx.onSelectEntry);
+    return createMapView(items, config, {
+      onSelect: ctx.onSelectEntry,
+    });
   },
 };
