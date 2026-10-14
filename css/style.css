@@ -121,6 +121,93 @@ button {
   color: var(--accent-ink);
 }
 
+/* --- Auth: вход для редакторов --- */
+
+#auth-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+#auth-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+#auth-form input {
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+#auth-form input[type="email"] {
+  width: 12rem;
+}
+
+#auth-form input[type="password"] {
+  width: 9rem;
+}
+
+#auth-form button,
+#logout-btn {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+#auth-form button:hover,
+#logout-btn:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+#auth-form button[type="submit"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+#auth-form button[type="submit"]:hover {
+  color: var(--accent-ink);
+  filter: brightness(1.05);
+}
+
+#auth-message {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+#auth-message:empty {
+  display: none;
+}
+
+#auth-message.is-error {
+  color: #c0392b;
+}
+
+#auth-message.is-success {
+  color: #2e7d5b;
+}
+
+body[data-world="afterlife"] #auth-message.is-error {
+  color: #f28b82;
+}
+
+body[data-world="afterlife"] #auth-message.is-success {
+  color: #8fd1c6;
+}
+
+/* --- Tabs --- */
+
 .tabs {
   display: flex;
   gap: 1.5rem;
@@ -471,6 +558,16 @@ main {
 
   .segmented button {
     padding: 0.45rem 0.8rem;
+  }
+
+  /* На мобильном форма входа становится компактнее */
+  #auth-form input[type="email"],
+  #auth-form input[type="password"] {
+    width: 100%;
+  }
+
+  #auth-form {
+    width: 100%;
   }
 }
 

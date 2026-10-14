@@ -1,41 +1,57 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Название ролевой</title>
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Название ролевой</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-world="real">
 
-<header class="top">
-  <h1 class="title" id="site-title">Название ролевой</h1>
-  <div class="segmented" id="world-switch" role="group" aria-label="Мир">
-    <button type="button" data-world="real" aria-pressed="true">Реальный мир</button>
-    <button type="button" data-world="afterlife" aria-pressed="false">Посмертие</button>
-  </div>
-</header>
+  <header class="top">
+    <h1 class="title" id="site-title">Название ролевой</h1>
 
-<nav class="tabs" id="tabs" aria-label="Разделы">
-  <button type="button" data-tab="timeline">Таймлайн</button>
-  <button type="button" data-tab="map">Карта</button>
-  <button type="button" data-tab="characters">Персонажи</button>
-  <button type="button" data-tab="other">Другое</button>
-</nav>
+    <div class="segmented" id="world-switch" role="group" aria-label="Мир">
+      <button type="button" data-world="real" aria-pressed="true">Реальный мир</button>
+      <button type="button" data-world="afterlife" aria-pressed="false">Посмертие</button>
+    </div>
 
-<main>
-  <div class="toolbar" id="toolbar">
-    <input class="search" id="search" type="search" autocomplete="off">
-    <div class="subcontrols" id="subcontrols"></div>
-  </div>
-  <section id="view" aria-live="polite"></section>
-</main>
+    <!-- Блок для входа/выхода редактора -->
+    <div id="auth-container">
+      <form id="auth-form">
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Пароль" required>
+        <button type="submit">Войти</button>
+        <button type="button" id="signup-btn">Зарегистрироваться</button>
+      </form>
+      <p id="auth-message"></p>
+    </div>
+    <button id="logout-btn" style="display:none;">Выйти</button>
+  </header>
 
-<aside class="sheet" id="sheet" role="dialog" aria-label="Описание поселения" hidden>
-  <button type="button" class="sheet-close" id="sheet-close">Закрыть</button>
-  <div id="sheet-body"></div>
-</aside>
+  <nav class="tabs" id="tabs" aria-label="Разделы">
+    <button type="button" data-tab="timeline">Таймлайн</button>
+    <button type="button" data-tab="map">Карта</button>
+    <button type="button" data-tab="characters">Персонажи</button>
+    <button type="button" data-tab="other">Другое</button>
+  </nav>
 
-<script type="module" src="js/app.js"></script>
+  <main>
+    <div class="toolbar" id="toolbar">
+      <input class="search" id="search" type="search" autocomplete="off">
+      <div class="subcontrols" id="subcontrols"></div>
+    </div>
+    <section id="view" aria-live="polite"></section>
+  </main>
+
+  <aside class="sheet" id="sheet" role="dialog" aria-label="Описание поселения" hidden>
+    <button type="button" class="sheet-close" id="sheet-close">Закрыть</button>
+    <div id="sheet-body"></div>
+  </aside>
+
+  <!-- Основной скрипт приложения -->
+  <script type="module" src="js/app.js"></script>
+  <!-- Скрипт авторизации -->
+  <script type="module" src="js/auth.js"></script>
 </body>
 </html>
