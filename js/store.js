@@ -1,24 +1,54 @@
-const cache = new Map();
+// js/store.js
+import { Character, Settlement, Event, MiscEntry } from './models.js';
 
-function load(name) {
-  if (!cache.has(name)) {
-    const request = fetch(`data/${name}.json`)
-      .then((response) => {
-        if (!response.ok) throw new Error(`Не удалось загрузить ${name}`);
-        return response.json();
-      })
-      .catch((error) => {
-        cache.delete(name);
-        throw error;
-      });
-    cache.set(name, request);
-  }
-  return cache.get(name);
-}
-
+/**
+ * Слой данных для app.js.
+ * Каждая функция возвращает Promise с массивом объектов,
+ * приведённых к форме, которую ожидает render.js.
+ */
 export const store = {
-  characters: () => load('characters'),
-  events: () => load('events'),
-  settlements: () => load('settlements'),
-  other: () => load('other')
+  async characters() {
+    const list = await Character.list();
+    return list.map((c) => c.toCard());
+  },
+
+  async settlements() {
+    const list = await Settlement.list();
+    return list.map((s) => ({
+      id: s.id,
+      world: s.world,
+      name: s.name,
+      description: s.description,
+      coordinates: s.coordinates,
+      color: s.color,
+      number: s.number,
+      // для карточек во вкладке "Другое"
+      kind: 'Поселение',
+      meta: null,
+      tags: [],
+    }));
+  },
+
+  async events() {
+    const list = await Event.list();
+    return list.map((e) => ({
+      id: e.id,
+      world: e.world,
+      title: e.title,
+      description: e.description,
+      scope: e.scope,
+      date: e.date,
+      order: e.order,
+      // для карточек во вкладке "Другое"
+      name: e.title,
+      kind: 'Событие',
+      meta: e.date,
+      tags: [],
+    }));
+  },
+
+  async other() {
+    const list = await MiscEntry.list();
+    return list.map((m) => m.toCard());
+  },
 };

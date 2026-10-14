@@ -1,3 +1,4 @@
+// js/app.js
 import { config } from './config.js';
 import { store } from './store.js';
 import { h, matchesQuery } from './util.js';
@@ -77,51 +78,26 @@ function renderChrome() {
   });
 }
 
+/* ---------- Загрузчики данных ---------- */
+
 async function loadCharacters() {
-  const characters = await store.characters();
-  return characters.map((character) => ({
-    world: character.world,
-    name: character.name,
-    kind: character.role,
-    meta: null,
-    description: character.description,
-    tags: character.tags || []
-  }));
+  return store.characters();
 }
 
 async function loadOtherItems() {
-  const [settlements, events, other] = await Promise.all([store.settlements(), store.events(), store.other()]);
-  return [
-    ...settlements.map((settlement) => ({
-      world: settlement.world,
-      name: settlement.name,
-      kind: 'Поселение',
-      meta: null,
-      description: settlement.description,
-      tags: []
-    })),
-    ...events.map((event) => ({
-      world: event.world,
-      name: event.title,
-      kind: 'Событие',
-      meta: event.date,
-      description: event.description,
-      tags: []
-    })),
-    ...other.map((entry) => ({
-      world: entry.world,
-      name: entry.name,
-      kind: entry.type,
-      meta: null,
-      description: entry.description,
-      tags: entry.tags || []
-    }))
-  ];
+  const [settlements, events, other] = await Promise.all([
+    store.settlements(),
+    store.events(),
+    store.other(),
+  ]);
+  return [...settlements, ...events, ...other];
 }
 
 function emptyText() {
   return state.query.trim() ? 'Ничего не найдено. Попробуйте другой запрос.' : 'В этом мире пока нет записей.';
 }
+
+/* ---------- Построение вью ---------- */
 
 async function buildView() {
   if (state.tab === 'map') {
@@ -160,7 +136,7 @@ async function renderResults() {
       h(
         'p',
         { class: 'empty' },
-        'Не удалось загрузить данные. Если вы открыли index.html двойным щелчком, запустите сайт через локальный сервер (см. README).'
+        'Не удалось загрузить данные. Проверь подключение к Supabase и настройки RLS.'
       )
     );
   }
@@ -212,6 +188,8 @@ async function renderControls() {
   }
 }
 
+/* ---------- Карта и боковая карточка ---------- */
+
 function markActive(id) {
   els.view.querySelectorAll('[data-settlement]').forEach((node) => {
     node.classList.toggle('is-active', node.dataset.settlement === id);
@@ -237,6 +215,8 @@ function closeSheet(restoreFocus = true) {
   sheetTrigger = null;
 }
 
+/* ---------- Переключение вкладок ---------- */
+
 function showTab(name) {
   state.tab = name;
   state.query = '';
@@ -247,6 +227,8 @@ function showTab(name) {
   renderControls();
   renderResults();
 }
+
+/* ---------- События UI ---------- */
 
 els.tabs.addEventListener('click', (event) => {
   const button = event.target.closest('button[data-tab]');
@@ -278,6 +260,13 @@ document.addEventListener('keydown', (event) => {
 });
 
 window.addEventListener('hashchange', () => showTab(tabFromHash()));
+
+// Обновление списка персонажей после добавления через форму
+document.addEventListener('characters:updated', () => {
+  if (state.tab === 'characters') renderResults();
+});
+
+/* ---------- Старт ---------- */
 
 document.title = config.title;
 els.title.textContent = config.title;
