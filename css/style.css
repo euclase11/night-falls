@@ -45,7 +45,9 @@ body {
 }
 
 button,
-input {
+input,
+textarea,
+select {
   font: inherit;
   color: inherit;
 }
@@ -58,6 +60,8 @@ button {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* ---------- Шапка ---------- */
 
 .top {
   display: flex;
@@ -121,7 +125,7 @@ button {
   color: var(--accent-ink);
 }
 
-/* --- Auth: вход для редакторов --- */
+/* ---------- Auth: вход для редакторов ---------- */
 
 #auth-container {
   display: flex;
@@ -206,7 +210,7 @@ body[data-world="afterlife"] #auth-message.is-success {
   color: #8fd1c6;
 }
 
-/* --- Tabs --- */
+/* ---------- Табы ---------- */
 
 .tabs {
   display: flex;
@@ -231,6 +235,8 @@ body[data-world="afterlife"] #auth-message.is-success {
   color: var(--ink);
   font-weight: 600;
 }
+
+/* ---------- Основной контент ---------- */
 
 main {
   max-width: var(--page);
@@ -267,6 +273,8 @@ main {
   padding: 2rem 0;
   color: var(--muted);
 }
+
+/* ---------- Таймлайн ---------- */
 
 .timeline {
   margin: 0;
@@ -308,6 +316,8 @@ main {
   max-width: 65ch;
   margin: 0;
 }
+
+/* ---------- Карточки записей ---------- */
 
 .entries {
   display: grid;
@@ -371,6 +381,8 @@ main {
   color: var(--muted);
   font-size: 0.8rem;
 }
+
+/* ---------- Карта ---------- */
 
 .map-stage {
   position: relative;
@@ -453,6 +465,8 @@ main {
   line-height: 1;
 }
 
+/* ---------- Боковая карточка (sheet) ---------- */
+
 .sheet {
   position: fixed;
   right: 0;
@@ -490,23 +504,131 @@ main {
   margin: 0;
 }
 
+/* ---------- Форма добавления ---------- */
+
+.add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 32rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.add-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.add-form input[type="text"],
+.add-form textarea,
+.add-form select {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.add-form input[type="file"] {
+  font-size: 0.9rem;
+}
+
+.add-form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.add-form-actions button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.add-form-actions button[type="submit"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.add-form-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+#char-message {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+#char-message:empty {
+  display: none;
+}
+
+#char-message.is-error {
+  color: #c0392b;
+}
+
+#char-message.is-success {
+  color: #2e7d5b;
+}
+
+body[data-world="afterlife"] #char-message.is-error {
+  color: #f28b82;
+}
+
+body[data-world="afterlife"] #char-message.is-success {
+  color: #8fd1c6;
+}
+
+#add-character {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 1.25rem 1rem;
+}
+
+/* Плавающая кнопка добавления */
+.floating-add {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 15;
+  padding: 0.7rem 1.2rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.floating-add:hover {
+  transform: translateY(-2px);
+}
+
+/* ---------- Анимации ---------- */
+
 @keyframes sheet-up {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
 
 @keyframes sheet-left {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
 }
+
+/* ---------- Адаптив ---------- */
 
 @media (min-width: 48rem) {
   .entries {
@@ -560,7 +682,6 @@ main {
     padding: 0.45rem 0.8rem;
   }
 
-  /* На мобильном форма входа становится компактнее */
   #auth-form input[type="email"],
   #auth-form input[type="password"] {
     width: 100%;
@@ -569,12 +690,17 @@ main {
   #auth-form {
     width: 100%;
   }
+
+  .floating-add {
+    bottom: 5rem; /* чтобы не перекрывать мобильные вкладки */
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   body,
   .marker,
-  .segmented button {
+  .segmented button,
+  .floating-add {
     transition: none;
   }
 
