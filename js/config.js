@@ -1,5 +1,5 @@
 export const config = {
-  title: 'Название ролевой',
+  title: 'наступает ночь',
   mapImage: 'assets/map.png',
   mapAlt: 'Карта мира'
 };

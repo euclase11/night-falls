@@ -67,30 +67,30 @@ export const FORMS = {
     },
   },
 
-  settlements: {
-    table: 'settlements',
-    title: 'Добавить поселение',
-    button: '+ Добавить поселение',
-    fields: [
-      { name: 'name', label: 'Название', type: 'text', required: true, maxLength: 80 },
-      { name: 'description', label: 'Описание', type: 'textarea', rows: 4 },
-      WORLD_FIELD,
-      { name: 'x', label: 'X на карте (%)', type: 'number', step: '0.01' },
-      { name: 'y', label: 'Y на карте (%)', type: 'number', step: '0.01' },
-      { name: 'color', label: 'Цвет точки', type: 'color', default: '#ff5555' },
-      { name: 'number', label: 'Номер на карте', type: 'number' },
-    ],
-    async toRow(v) {
-      return {
-        name: v.name.trim(),
-        description: v.description.trim(),
-        world: v.world,
-        coordinates: { x: Number(v.x) || 0, y: Number(v.y) || 0 },
-        color: v.color.trim() || null,
-        number: v.number ? Number(v.number) : null,
-      };
-    },
-  },
+  // settlements: {
+  //   table: 'settlements',
+  //   title: 'Добавить поселение',
+  //   button: '+ Добавить поселение',
+  //   fields: [
+  //     { name: 'name', label: 'Название', type: 'text', required: true, maxLength: 80 },
+  //     { name: 'description', label: 'Описание', type: 'textarea', rows: 4 },
+  //     WORLD_FIELD,
+  //     { name: 'x', label: 'X на карте (%)', type: 'number', step: '0.01' },
+  //     { name: 'y', label: 'Y на карте (%)', type: 'number', step: '0.01' },
+  //     { name: 'color', label: 'Цвет точки', type: 'color', default: '#ff5555' },
+  //     { name: 'number', label: 'Номер на карте', type: 'number' },
+  //   ],
+  //   async toRow(v) {
+  //     return {
+  //       name: v.name.trim(),
+  //       description: v.description.trim(),
+  //       world: v.world,
+  //       coordinates: { x: Number(v.x) || 0, y: Number(v.y) || 0 },
+  //       color: v.color.trim() || null,
+  //       number: v.number ? Number(v.number) : null,
+  //     };
+  //   },
+  // },
 
   misc: {
     table: 'misc',

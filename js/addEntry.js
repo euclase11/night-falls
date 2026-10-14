@@ -18,8 +18,8 @@ let isLoggedIn = false;
 function formKeyForTab(tabId) {
   switch (tabId) {
     case 'characters': return 'characters';
-    case 'timeline':   return 'events';
-    case 'map':        return 'settlements';
+    case 'timeline': return 'events';
+    case 'map': return 'settlements';
     default: return null;
   }
 }
@@ -65,11 +65,13 @@ function renderField(field, prefill = {}) {
       input.step = field.step ?? 'any';
       break;
 
-    case 'color':
+    case 'color': {
       input = document.createElement('input');
       input.type = 'color';
-      if (!field.default) input.value = '#ff5555';
+      // Значение по умолчанию — обязательно валидный hex
+      input.value = field.default || '#ff5555';
       break;
+    }
 
     default:
       input = document.createElement('input');
@@ -82,9 +84,18 @@ function renderField(field, prefill = {}) {
   if (field.maxLength) input.maxLength = field.maxLength;
   if (field.placeholder) input.placeholder = field.placeholder;
 
-  // Предзаполнение
-  if (prefill[field.name] != null) {
-    input.value = prefill[field.name];
+  // Предзаполнение (аккуратно с type="color")
+  if (prefill[field.name] != null && prefill[field.name] !== '') {
+    if (field.type === 'color') {
+      // Только если значение похоже на hex-цвет
+      const candidate = String(prefill[field.name]).trim();
+      if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(candidate)) {
+        input.value = candidate;
+      }
+      // иначе оставляем default (уже установлен выше)
+    } else {
+      input.value = prefill[field.name];
+    }
   }
 
   wrapper.append(input);

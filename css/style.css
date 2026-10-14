@@ -2,23 +2,29 @@
   --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   --page: 60rem;
-  --bg: #e9edef;
-  --surface: #f7f9fa;
-  --ink: #1d2830;
-  --muted: #566772;
-  --line: #c3cdd3;
-  --accent: #2c6e8e;
-  --accent-ink: #ffffff;
+
+  /* Реальный мир: серый + оранжевый */
+  --bg:             #ececea;
+  --surface:        #f6f4f1;
+  --ink:            #241f1b;
+  --muted:          #6b625a;
+  --line:           #cfc8c0;
+  --accent:         #d97a2b;
+  --accent-ink:     #ffffff;
+
+  color-scheme: light;
 }
 
 body[data-world="afterlife"] {
-  --bg: #15141b;
-  --surface: #1e1d27;
-  --ink: #e8e4da;
-  --muted: #a3a0ad;
-  --line: #353441;
-  --accent: #8fd1c6;
-  --accent-ink: #0f1a18;
+  /* Посмертие: бордовый + светло-розовый */
+  --bg:             #1a0d14;
+  --surface:        #2a1420;
+  --ink:            #f2dfe6;
+  --muted:          #b191a0;
+  --line:           #4a2436;
+  --accent:         #f2a6c2;
+  --accent-ink:     #3d0e22;
+
   color-scheme: dark;
 }
 
@@ -195,11 +201,11 @@ button {
 }
 
 #auth-message.is-error {
-  color: #c0392b;
+  color: #b13322;
 }
 
 #auth-message.is-success {
-  color: #2e7d5b;
+  color: #8a5310;
 }
 
 body[data-world="afterlife"] #auth-message.is-error {
@@ -207,7 +213,7 @@ body[data-world="afterlife"] #auth-message.is-error {
 }
 
 body[data-world="afterlife"] #auth-message.is-success {
-  color: #8fd1c6;
+  color: #f2a6c2;
 }
 
 /* ---------- Табы ---------- */
@@ -317,6 +323,45 @@ main {
   margin: 0;
 }
 
+/* ---------- Кликабельные карточки и события ---------- */
+
+.entry.is-clickable,
+.timeline-item.is-clickable {
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.entry.is-clickable {
+  padding: 1rem 0.75rem;
+  margin: 0 -0.75rem;
+}
+
+.timeline-item.is-clickable {
+  margin: 0 -0.75rem 0 0;
+  padding-right: 0.75rem;
+}
+
+.entry.is-clickable:hover,
+.timeline-item.is-clickable:hover {
+  background: rgba(217, 122, 43, 0.10);
+}
+
+body[data-world="afterlife"] .entry.is-clickable:hover,
+body[data-world="afterlife"] .timeline-item.is-clickable:hover {
+  background: rgba(242, 166, 194, 0.12);
+}
+
+.entry.is-clickable.is-active,
+.timeline-item.is-clickable.is-active {
+  background: rgba(217, 122, 43, 0.18);
+}
+
+body[data-world="afterlife"] .entry.is-clickable.is-active,
+body[data-world="afterlife"] .timeline-item.is-clickable.is-active {
+  background: rgba(242, 166, 194, 0.20);
+}
+
 /* ---------- Карточки записей ---------- */
 
 .entries {
@@ -382,380 +427,6 @@ main {
   font-size: 0.8rem;
 }
 
-/* ---------- Карта ---------- */
-
-.map-stage {
-  position: relative;
-  line-height: 0;
-}
-
-.map-image {
-  display: block;
-  width: 100%;
-  height: auto;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  user-select: none;
-}
-
-.marker {
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  background: var(--marker-color);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
-  color: var(--marker-ink);
-  font-size: 0.8rem;
-  font-weight: 700;
-  line-height: 1;
-  transform: translate(-50%, -50%);
-  transition: transform 0.15s ease;
-}
-
-.marker::after {
-  content: "";
-  position: absolute;
-  inset: -8px;
-}
-
-.marker.is-active {
-  z-index: 2;
-  box-shadow: 0 0 0 3px var(--accent), 0 1px 4px rgba(0, 0, 0, 0.45);
-  transform: translate(-50%, -50%) scale(1.25);
-}
-
-.map-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
-  margin: 1rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0;
-  border: 0;
-  background: none;
-}
-
-.legend-item.is-active {
-  text-decoration: underline;
-  text-decoration-color: var(--accent);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 4px;
-}
-
-.dot {
-  display: inline-grid;
-  place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  background: var(--marker-color);
-  color: var(--marker-ink);
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-/* ---------- Боковая карточка (sheet) ---------- */
-
-.sheet {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 30;
-  max-height: 70vh;
-  padding: 3rem 1.25rem 1.5rem;
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: 14px 14px 0 0;
-  background: var(--surface);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-  animation: sheet-up 0.2s ease-out;
-}
-
-.sheet-close {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  padding: 0.35rem 0.8rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-}
-
-.sheet h2 {
-  margin: 0.75rem 0 0.5rem;
-  font-family: var(--font-display);
-  font-size: 1.4rem;
-}
-
-.sheet p {
-  margin: 0;
-}
-
-/* ---------- Универсальная форма добавления ---------- */
-
-#entry-form-section {
-  max-width: var(--page);
-  margin: 0 auto;
-  padding: 1.25rem 1rem;
-}
-
-.add-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-width: 32rem;
-  margin: 1rem 0;
-  padding: 1rem;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-}
-
-.add-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.9rem;
-  color: var(--muted);
-}
-
-.add-form input[type="text"],
-.add-form input[type="number"],
-.add-form textarea,
-.add-form select {
-  padding: 0.5rem 0.7rem;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--ink);
-  font-size: 1rem;
-}
-
-.add-form input[type="file"] {
-  font-size: 0.9rem;
-}
-
-#entry-form-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.add-form-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.add-form-actions button {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--muted);
-}
-
-.add-form-actions button[type="submit"] {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-ink);
-}
-
-.add-form-actions button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-#entry-form-message {
-  margin: 0;
-  font-size: 0.9rem;
-}
-
-#entry-form-message:empty {
-  display: none;
-}
-
-#entry-form-message.is-error {
-  color: #c0392b;
-}
-
-#entry-form-message.is-success {
-  color: #2e7d5b;
-}
-
-body[data-world="afterlife"] #entry-form-message.is-error {
-  color: #f28b82;
-}
-
-body[data-world="afterlife"] #entry-form-message.is-success {
-  color: #8fd1c6;
-}
-
-/* Плавающая кнопка добавления */
-.floating-add {
-  position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 15;
-  padding: 0.7rem 1.2rem;
-  border: 0;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-weight: 600;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  transition: transform 0.15s ease;
-}
-
-.floating-add:hover {
-  transform: translateY(-2px);
-}
-
-/* ---------- Анимации ---------- */
-
-@keyframes sheet-up {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-
-@keyframes sheet-left {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
-}
-
-/* ---------- Адаптив ---------- */
-
-@media (min-width: 48rem) {
-  .entries {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .sheet {
-    top: 0;
-    left: auto;
-    width: 22rem;
-    max-height: none;
-    border-radius: 0;
-    animation-name: sheet-left;
-  }
-}
-
-@media (max-width: 40rem) {
-  .tabs {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 20;
-    gap: 0;
-    max-width: none;
-    margin: 0;
-    padding: 0 0 env(safe-area-inset-bottom);
-    border-top: 1px solid var(--line);
-    border-bottom: 0;
-    background: var(--surface);
-  }
-
-  .tabs button {
-    flex: 1;
-    margin: 0;
-    padding: 0.85rem 0.25rem;
-    border-top: 2px solid transparent;
-    border-bottom: 0;
-    font-size: 0.85rem;
-  }
-
-  .tabs button[aria-current="page"] {
-    border-top-color: var(--accent);
-  }
-
-  main {
-    padding-bottom: 6rem;
-  }
-
-  .segmented button {
-    padding: 0.45rem 0.8rem;
-  }
-
-  #auth-form input[type="email"],
-  #auth-form input[type="password"] {
-    width: 100%;
-  }
-
-  #auth-form {
-    width: 100%;
-  }
-
-  .floating-add {
-    bottom: 5rem; /* чтобы не перекрывать мобильные вкладки */
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body,
-  .marker,
-  .segmented button,
-  .floating-add {
-    transition: none;
-  }
-
-  .sheet {
-    animation: none;
-  }
-}
-
-/* ---------- Кликабельные карточки ---------- */
-
-.entry.is-clickable,
-.timeline-item.is-clickable {
-  cursor: pointer;
-  border-radius: 8px;
-  transition: background-color 0.15s ease;
-}
-
-.entry.is-clickable {
-  padding: 1rem 0.75rem;
-  margin: 0 -0.75rem;
-}
-
-.timeline-item.is-clickable {
-  padding: 0 0 1.75rem 1rem;
-  margin: 0 -0.75rem 0 0;
-  padding-right: 0.75rem;
-}
-
-.entry.is-clickable:hover,
-.timeline-item.is-clickable:hover {
-  background: rgba(44, 110, 142, 0.08);
-}
-
-body[data-world="afterlife"] .entry.is-clickable:hover,
-body[data-world="afterlife"] .timeline-item.is-clickable:hover {
-  background: rgba(143, 209, 198, 0.10);
-}
-
-.entry.is-clickable.is-active,
-.timeline-item.is-clickable.is-active {
-  background: rgba(44, 110, 142, 0.15);
-}
-
-body[data-world="afterlife"] .entry.is-clickable.is-active,
-body[data-world="afterlife"] .timeline-item.is-clickable.is-active {
-  background: rgba(143, 209, 198, 0.18);
-}
-
 /* Превью картинки в карточке */
 .entry-thumb {
   float: right;
@@ -765,30 +436,6 @@ body[data-world="afterlife"] .timeline-item.is-clickable.is-active {
   object-fit: cover;
   border-radius: 8px;
   border: 1px solid var(--line);
-}
-
-/* ---------- Бланк записи (в sheet) ---------- */
-
-.entry-details .details-image {
-  display: block;
-  width: 100%;
-  max-height: 20rem;
-  object-fit: cover;
-  border-radius: 8px;
-  margin: 0 0 1rem;
-  border: 1px solid var(--line);
-}
-
-.entry-details .details-kind {
-  margin: 0.25rem 0 0;
-  color: var(--accent);
-  font-size: 0.9rem;
-}
-
-.entry-details .details-meta {
-  margin: 0.15rem 0 0;
-  color: var(--muted);
-  font-size: 0.85rem;
 }
 
 /* ---------- Скелетон загрузки ---------- */
@@ -841,13 +488,6 @@ body[data-world="afterlife"] .timeline-item.is-clickable.is-active {
   opacity: 0.55;
   pointer-events: none;
   transition: opacity 0.15s ease;
-}
-
-/* Скелетон в таймлайне (опционально, тот же вид) */
-@media (prefers-reduced-motion: reduce) {
-  .skeleton-bar {
-    animation: none;
-  }
 }
 
 /* ---------- Интерактивная карта ---------- */
@@ -966,11 +606,11 @@ body[data-world="afterlife"] .timeline-item.is-clickable.is-active {
 }
 
 .map-menu-item:hover {
-  background: rgba(44, 110, 142, 0.12);
+  background: rgba(217, 122, 43, 0.14);
 }
 
 body[data-world="afterlife"] .map-menu-item:hover {
-  background: rgba(143, 209, 198, 0.15);
+  background: rgba(242, 166, 194, 0.16);
 }
 
 /* Легенда под картой */
@@ -1012,7 +652,113 @@ body[data-world="afterlife"] .map-menu-item:hover {
   line-height: 1;
 }
 
-/* Убедимся, что <input type="color"> выглядит адекватно */
+/* ---------- Боковая карточка (sheet) ---------- */
+
+.sheet {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  max-height: 70vh;
+  padding: 3rem 1.25rem 1.5rem;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 0 0;
+  background: var(--surface);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  animation: sheet-up 0.2s ease-out;
+}
+
+.sheet-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.sheet h2 {
+  margin: 0.75rem 0 0.5rem;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+}
+
+.sheet p {
+  margin: 0;
+}
+
+/* ---------- Бланк записи в sheet ---------- */
+
+.entry-details .details-image {
+  display: block;
+  width: 100%;
+  max-height: 20rem;
+  object-fit: cover;
+  border-radius: 8px;
+  margin: 0 0 1rem;
+  border: 1px solid var(--line);
+}
+
+.entry-details .details-kind {
+  margin: 0.25rem 0 0;
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.entry-details .details-meta {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ---------- Универсальная форма добавления ---------- */
+
+#entry-form-section {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 1.25rem 1rem;
+}
+
+.add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 32rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.add-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.add-form input[type="text"],
+.add-form input[type="number"],
+.add-form textarea,
+.add-form select {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.add-form input[type="file"] {
+  font-size: 0.9rem;
+}
+
 .add-form input[type="color"] {
   width: 3.5rem;
   height: 2.2rem;
@@ -1021,4 +767,176 @@ body[data-world="afterlife"] .map-menu-item:hover {
   border-radius: 6px;
   background: var(--surface);
   cursor: pointer;
+}
+
+#entry-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.add-form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.add-form-actions button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.add-form-actions button[type="submit"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.add-form-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+#entry-form-message {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+#entry-form-message:empty {
+  display: none;
+}
+
+#entry-form-message.is-error {
+  color: #b13322;
+}
+
+#entry-form-message.is-success {
+  color: #8a5310;
+}
+
+body[data-world="afterlife"] #entry-form-message.is-error {
+  color: #f28b82;
+}
+
+body[data-world="afterlife"] #entry-form-message.is-success {
+  color: #f2a6c2;
+}
+
+/* Плавающая кнопка добавления */
+.floating-add {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 15;
+  padding: 0.7rem 1.2rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.floating-add:hover {
+  transform: translateY(-2px);
+}
+
+/* ---------- Анимации ---------- */
+
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes sheet-left {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* ---------- Адаптив ---------- */
+
+@media (min-width: 48rem) {
+  .entries {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sheet {
+    top: 0;
+    left: auto;
+    width: 22rem;
+    max-height: none;
+    border-radius: 0;
+    animation-name: sheet-left;
+  }
+}
+
+@media (max-width: 40rem) {
+  .tabs {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+    gap: 0;
+    max-width: none;
+    margin: 0;
+    padding: 0 0 env(safe-area-inset-bottom);
+    border-top: 1px solid var(--line);
+    border-bottom: 0;
+    background: var(--surface);
+  }
+
+  .tabs button {
+    flex: 1;
+    margin: 0;
+    padding: 0.85rem 0.25rem;
+    border-top: 2px solid transparent;
+    border-bottom: 0;
+    font-size: 0.85rem;
+  }
+
+  .tabs button[aria-current="page"] {
+    border-top-color: var(--accent);
+  }
+
+  main {
+    padding-bottom: 6rem;
+  }
+
+  .segmented button {
+    padding: 0.45rem 0.8rem;
+  }
+
+  #auth-form input[type="email"],
+  #auth-form input[type="password"] {
+    width: 100%;
+  }
+
+  #auth-form {
+    width: 100%;
+  }
+
+  .floating-add {
+    bottom: 5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  .marker,
+  .segmented button,
+  .floating-add {
+    transition: none;
+  }
+
+  .skeleton-bar {
+    animation: none;
+  }
+
+  .sheet {
+    animation: none;
+  }
 }
