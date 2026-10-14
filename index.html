@@ -44,45 +44,22 @@
     <section id="view" aria-live="polite"></section>
   </main>
 
-  <!-- Форма добавления персонажа (видна только после входа) -->
-  <section id="add-character" class="editor-only" hidden>
-    <h2>Добавить персонажа</h2>
-    <form id="character-form" class="add-form">
-      <label>
-        Имя
-        <input type="text" id="char-name" required maxlength="80">
-      </label>
-
-      <label>
-        Описание
-        <textarea id="char-desc" rows="4" maxlength="2000"></textarea>
-      </label>
-
-      <label>
-        Мир
-        <select id="char-world">
-          <option value="real">Реальный мир</option>
-          <option value="afterlife">Посмертие</option>
-        </select>
-      </label>
-
-      <label>
-        Картинка
-        <input type="file" id="char-image" accept="image/*">
-      </label>
-
+  <!-- Универсальная форма добавления (видна только после входа) -->
+  <section id="entry-form-section" class="editor-only" hidden>
+    <h2 id="entry-form-title">Добавить запись</h2>
+    <form id="entry-form" class="add-form">
+      <div id="entry-form-fields"></div>
       <div class="add-form-actions">
-        <button type="submit" id="char-submit">Сохранить</button>
-        <button type="button" id="char-cancel">Отмена</button>
+        <button type="submit" id="entry-submit">Сохранить</button>
+        <button type="button" id="entry-cancel">Отмена</button>
       </div>
-
-      <p id="char-message"></p>
+      <p id="entry-form-message"></p>
     </form>
   </section>
 
-  <!-- Плавающая кнопка "Добавить персонажа" (только после входа) -->
-  <button type="button" id="open-character-form" class="editor-only floating-add" hidden>
-    + Добавить персонажа
+  <!-- Плавающая кнопка добавления (только после входа) -->
+  <button type="button" id="open-entry-form" class="editor-only floating-add" hidden>
+    + Добавить
   </button>
 
   <aside class="sheet" id="sheet" role="dialog" aria-label="Описание поселения" hidden>
@@ -92,6 +69,6 @@
 
   <script type="module" src="js/app.js"></script>
   <script type="module" src="js/auth.js"></script>
-  <script type="module" src="js/addCharacter.js"></script>
+  <script type="module" src="js/addEntry.js"></script>
 </body>
 </html>
