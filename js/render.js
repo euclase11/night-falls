@@ -201,3 +201,21 @@ export function renderEntryDetails(entry) {
     h('p', {}, entry.description)
   );
 }
+
+/* ---------- Скелетон загрузки ---------- */
+
+export function renderSkeleton(count = 4) {
+  return h(
+    'ul',
+    { class: 'skeleton', 'aria-hidden': 'true' },
+    Array.from({ length: count }, () =>
+      h(
+        'li',
+        { class: 'skeleton-item' },
+        h('div', { class: 'skeleton-bar w-40' }),
+        h('div', { class: 'skeleton-bar w-90' }),
+        h('div', { class: 'skeleton-bar w-60' })
+      )
+    )
+  );
+}

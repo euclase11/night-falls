@@ -790,3 +790,62 @@ body[data-world="afterlife"] .timeline-item.is-clickable.is-active {
   color: var(--muted);
   font-size: 0.85rem;
 }
+
+/* ---------- Скелетон загрузки ---------- */
+
+.skeleton {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 2.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 48rem) {
+  .skeleton {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.skeleton-item {
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.skeleton-bar {
+  height: 0.85rem;
+  margin: 0.5rem 0;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--line) 0%,
+    var(--surface) 50%,
+    var(--line) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-bar.w-40 { width: 40%; }
+.skeleton-bar.w-60 { width: 60%; }
+.skeleton-bar.w-90 { width: 90%; }
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Лёгкое затемнение при поиске/фильтрах */
+#view.is-busy {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+/* Скелетон в таймлайне (опционально, тот же вид) */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bar {
+    animation: none;
+  }
+}

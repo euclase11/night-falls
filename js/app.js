@@ -1,7 +1,7 @@
 // js/app.js
 import { config } from './config.js';
 import { h } from './util.js';
-import { renderEntryDetails } from './render.js';
+import { renderEntryDetails, renderSkeleton } from './render.js';
 import { TABS } from './tabs/index.js';
 
 const DEFAULT_TAB = 'timeline';
@@ -38,6 +38,7 @@ const state = {
 let renderToken = 0;
 let controlsToken = 0;
 let sheetTrigger = null;
+let renderSkeletonTimer = null;
 
 function tabFromHash() {
   const name = location.hash.replace('#', '');
@@ -89,15 +90,42 @@ function renderChrome() {
 
 /* ---------- Render ---------- */
 
-async function renderResults() {
+/**
+ * Отрисовать содержимое текущей вкладки.
+ * @param {{ skeleton?: boolean }} opts
+ *   skeleton: true — показывать скелетон (для переключения вкладок/мира),
+ *   false/undefined — оставить старое содержимое и подсветить его как "занято" (поиск, фильтры).
+ */
+async function renderResults({ skeleton = false } = {}) {
   const token = ++renderToken;
+  const isEmpty = els.view.children.length === 0;
+  const useSkeleton = skeleton || isEmpty;
+
+  clearTimeout(renderSkeletonTimer);
+
+  if (useSkeleton) {
+    renderSkeletonTimer = setTimeout(() => {
+      if (token === renderToken) {
+        els.view.replaceChildren(renderSkeleton());
+      }
+    }, 100);
+  } else {
+    els.view.classList.add('is-busy');
+  }
+
   try {
     const tab = TABS[state.tab];
     const items = await tab.load(state);
     if (token !== renderToken) return;
+
+    clearTimeout(renderSkeletonTimer);
+    els.view.classList.remove('is-busy');
     els.view.replaceChildren(tab.render(items, emptyText(), ctx));
   } catch (error) {
     if (token !== renderToken) return;
+
+    clearTimeout(renderSkeletonTimer);
+    els.view.classList.remove('is-busy');
     console.error(error);
     els.view.replaceChildren(
       h('p', { class: 'empty' }, 'Не удалось загрузить данные. Проверь Supabase и RLS.')
@@ -159,7 +187,7 @@ function showTab(name) {
   closeSheet(false);
   renderChrome();
   renderControls();
-  renderResults();
+  renderResults({ skeleton: true });
 }
 
 /* ---------- События ---------- */
@@ -179,7 +207,7 @@ els.worldSwitch.addEventListener('click', (event) => {
   writeSetting('world', state.world);
   renderChrome();
   renderControls();
-  renderResults();
+  renderResults({ skeleton: true });
 });
 
 els.search.addEventListener('input', () => {
