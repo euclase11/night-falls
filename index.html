@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Название ролевой</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-world="real">
+
+<header class="top">
+  <h1 class="title" id="site-title">Название ролевой</h1>
+  <div class="segmented" id="world-switch" role="group" aria-label="Мир">
+    <button type="button" data-world="real" aria-pressed="true">Реальный мир</button>
+    <button type="button" data-world="afterlife" aria-pressed="false">Посмертие</button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs" aria-label="Разделы">
+  <button type="button" data-tab="timeline">Таймлайн</button>
+  <button type="button" data-tab="map">Карта</button>
+  <button type="button" data-tab="characters">Персонажи</button>
+  <button type="button" data-tab="other">Другое</button>
+</nav>
+
+<main>
+  <div class="toolbar" id="toolbar">
+    <input class="search" id="search" type="search" autocomplete="off">
+    <div class="subcontrols" id="subcontrols"></div>
+  </div>
+  <section id="view" aria-live="polite"></section>
+</main>
+
+<aside class="sheet" id="sheet" role="dialog" aria-label="Описание поселения" hidden>
+  <button type="button" class="sheet-close" id="sheet-close">Закрыть</button>
+  <div id="sheet-body"></div>
+</aside>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <rect width="1200" height="800" fill="#c9d6dc"/>
+  <path d="M120 420 C 140 250, 360 170, 520 220 C 640 260, 700 200, 820 240 C 980 290, 1060 420, 1000 560 C 940 690, 760 720, 620 690 C 480 660, 400 720, 270 670 C 150 620, 100 520, 120 420 Z" fill="#e4e0cf" stroke="#9aa7a0" stroke-width="3"/>
+  <path d="M300 380 C 340 330, 420 340, 440 390 C 460 440, 400 480, 340 470 C 290 460, 280 410, 300 380 Z" fill="#d3d9bf"/>
+  <text x="600" y="765" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#5f7078">Заглушка: замените на свою карту</text>
+</svg>
