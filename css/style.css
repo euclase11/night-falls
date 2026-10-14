@@ -715,3 +715,78 @@ body[data-world="afterlife"] #entry-form-message.is-success {
     animation: none;
   }
 }
+
+/* ---------- Кликабельные карточки ---------- */
+
+.entry.is-clickable,
+.timeline-item.is-clickable {
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.entry.is-clickable {
+  padding: 1rem 0.75rem;
+  margin: 0 -0.75rem;
+}
+
+.timeline-item.is-clickable {
+  padding: 0 0 1.75rem 1rem;
+  margin: 0 -0.75rem 0 0;
+  padding-right: 0.75rem;
+}
+
+.entry.is-clickable:hover,
+.timeline-item.is-clickable:hover {
+  background: rgba(44, 110, 142, 0.08);
+}
+
+body[data-world="afterlife"] .entry.is-clickable:hover,
+body[data-world="afterlife"] .timeline-item.is-clickable:hover {
+  background: rgba(143, 209, 198, 0.10);
+}
+
+.entry.is-clickable.is-active,
+.timeline-item.is-clickable.is-active {
+  background: rgba(44, 110, 142, 0.15);
+}
+
+body[data-world="afterlife"] .entry.is-clickable.is-active,
+body[data-world="afterlife"] .timeline-item.is-clickable.is-active {
+  background: rgba(143, 209, 198, 0.18);
+}
+
+/* Превью картинки в карточке */
+.entry-thumb {
+  float: right;
+  width: 80px;
+  height: 80px;
+  margin: 0 0 0.5rem 0.75rem;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+/* ---------- Бланк записи (в sheet) ---------- */
+
+.entry-details .details-image {
+  display: block;
+  width: 100%;
+  max-height: 20rem;
+  object-fit: cover;
+  border-radius: 8px;
+  margin: 0 0 1rem;
+  border: 1px solid var(--line);
+}
+
+.entry-details .details-kind {
+  margin: 0.25rem 0 0;
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.entry-details .details-meta {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}

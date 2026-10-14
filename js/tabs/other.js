@@ -40,7 +40,7 @@ export const otherTab = {
     });
   },
 
-  render(items, emptyText) {
-    return renderEntries(items, emptyText);
+  render(items, emptyText, ctx) {
+    return renderEntries(items, emptyText, ctx.onSelectEntry);
   },
 };

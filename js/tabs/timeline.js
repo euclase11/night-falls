@@ -30,7 +30,7 @@ export const timelineTab = {
     });
   },
 
-  render(items, emptyText) {
-    return renderTimeline(items, emptyText);
+  render(items, emptyText, ctx) {
+    return renderTimeline(items, emptyText, ctx.onSelectEntry);
   },
 };

@@ -1,5 +1,5 @@
 export const config = {
   title: 'Название ролевой',
-  mapImage: 'assets/map.svg',
+  mapImage: 'assets/map.png',
   mapAlt: 'Карта мира'
 };

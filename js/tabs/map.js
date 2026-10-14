@@ -14,6 +14,6 @@ export const mapTab = {
   },
 
   render(items, _emptyText, ctx) {
-    return renderMap(items, config, ctx.onSelectSettlement);
+    return renderMap(items, config, ctx.onSelectEntry);
   },
 };

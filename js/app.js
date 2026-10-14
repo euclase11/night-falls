@@ -1,200 +1,207 @@
-// js/addEntry.js
-import { supabase } from './supabase.js';
-import { FORMS } from './forms.js';
+// js/app.js
+import { config } from './config.js';
+import { h } from './util.js';
+import { renderEntryDetails } from './render.js';
+import { TABS } from './tabs/index.js';
 
-const section = document.getElementById('entry-form-section');
-const formEl = document.getElementById('entry-form');
-const titleEl = document.getElementById('entry-form-title');
-const fieldsEl = document.getElementById('entry-form-fields');
-const message = document.getElementById('entry-form-message');
-const submitBtn = document.getElementById('entry-submit');
-const cancelBtn = document.getElementById('entry-cancel');
-const openBtn = document.getElementById('open-entry-form');
+const DEFAULT_TAB = 'timeline';
 
-let isLoggedIn = false;
+const els = {
+  title: document.getElementById('site-title'),
+  worldSwitch: document.getElementById('world-switch'),
+  tabs: document.getElementById('tabs'),
+  toolbar: document.getElementById('toolbar'),
+  search: document.getElementById('search'),
+  subcontrols: document.getElementById('subcontrols'),
+  view: document.getElementById('view'),
+  sheet: document.getElementById('sheet'),
+  sheetBody: document.getElementById('sheet-body'),
+  sheetClose: document.getElementById('sheet-close'),
+};
 
-/** Какой тип формы соответствует текущей вкладке. */
-function formKeyForTab(tabId) {
-  switch (tabId) {
-    case 'characters': return 'characters';
-    case 'timeline':   return 'events';
-    case 'map':        return 'settlements';
-    // 'other' — форма не показывается, добавлять можно на соответствующих вкладках
-    default: return null;
-  }
+function readSetting(key) {
+  try { return localStorage.getItem(key); } catch { return null; }
 }
 
-function currentTabId() {
-  return location.hash.replace('#', '') || 'timeline';
+function writeSetting(key, value) {
+  try { localStorage.setItem(key, value); } catch { /* ignore */ }
 }
 
-/* ---------- Рендер полей ---------- */
+const state = {
+  tab: DEFAULT_TAB,
+  world: readSetting('world') === 'afterlife' ? 'afterlife' : 'real',
+  scope: 'global',
+  kind: 'all',
+  query: '',
+};
 
-function renderField(field) {
-  const wrapper = document.createElement('label');
-  wrapper.textContent = field.label;
+let renderToken = 0;
+let controlsToken = 0;
+let sheetTrigger = null;
 
-  let input;
-  switch (field.type) {
-    case 'textarea':
-      input = document.createElement('textarea');
-      if (field.rows) input.rows = field.rows;
-      break;
+function tabFromHash() {
+  const name = location.hash.replace('#', '');
+  return Object.hasOwn(TABS, name) ? name : DEFAULT_TAB;
+}
 
-    case 'select': {
-      input = document.createElement('select');
-      for (const [value, label] of field.options) {
-        const opt = document.createElement('option');
-        opt.value = value;
-        opt.textContent = label;
-        input.append(opt);
-      }
-      if (field.default) input.value = field.default;
-      break;
+function emptyText() {
+  return state.query.trim()
+    ? 'Ничего не найдено. Попробуйте другой запрос.'
+    : 'В этом мире пока нет записей.';
+}
+
+/* ---------- Контекст для табов ---------- */
+
+const ctx = {
+  onScopeChange(value) {
+    state.scope = value;
+    renderResults();
+  },
+  onKindChange(value) {
+    state.kind = value;
+    renderResults();
+  },
+  onSelectEntry(entry, trigger) {
+    selectEntry(entry, trigger);
+  },
+};
+
+/* ---------- Chrome ---------- */
+
+function renderChrome() {
+  const tab = TABS[state.tab];
+  document.body.dataset.world = state.world;
+  els.worldSwitch.hidden = !tab.useWorld;
+  els.toolbar.hidden = !tab.useSearch;
+  els.search.placeholder = tab.placeholder;
+  els.search.setAttribute('aria-label', tab.placeholder);
+  els.worldSwitch.querySelectorAll('button').forEach((button) => {
+    button.setAttribute('aria-pressed', String(button.dataset.world === state.world));
+  });
+  els.tabs.querySelectorAll('button').forEach((button) => {
+    if (button.dataset.tab === state.tab) {
+      button.setAttribute('aria-current', 'page');
+    } else {
+      button.removeAttribute('aria-current');
     }
+  });
+}
 
-    case 'file':
-      input = document.createElement('input');
-      input.type = 'file';
-      if (field.accept) input.accept = field.accept;
-      break;
+/* ---------- Render ---------- */
 
-    case 'number':
-      input = document.createElement('input');
-      input.type = 'number';
-      break;
-
-    default:
-      input = document.createElement('input');
-      input.type = 'text';
+async function renderResults() {
+  const token = ++renderToken;
+  try {
+    const tab = TABS[state.tab];
+    const items = await tab.load(state);
+    if (token !== renderToken) return;
+    els.view.replaceChildren(tab.render(items, emptyText(), ctx));
+  } catch (error) {
+    if (token !== renderToken) return;
+    console.error(error);
+    els.view.replaceChildren(
+      h('p', { class: 'empty' }, 'Не удалось загрузить данные. Проверь Supabase и RLS.')
+    );
   }
-
-  input.id = `field-${field.name}`;
-  input.name = field.name;
-  if (field.required) input.required = true;
-  if (field.maxLength) input.maxLength = field.maxLength;
-  if (field.placeholder) input.placeholder = field.placeholder;
-
-  wrapper.append(input);
-  return wrapper;
 }
 
-function renderForm(config) {
-  titleEl.textContent = config.title;
-  fieldsEl.replaceChildren(...config.fields.map(renderField));
-}
+async function renderControls() {
+  const token = ++controlsToken;
+  els.subcontrols.replaceChildren();
 
-function collectValues(config) {
-  const values = {};
-  for (const field of config.fields) {
-    const input = fieldsEl.querySelector(`#field-${field.name}`);
-    values[field.name] = field.type === 'file' ? input.files[0] || null : input.value;
-  }
-  return values;
-}
-
-/* ---------- Видимость кнопки ---------- */
-
-function updateButtonVisibility() {
-  const key = formKeyForTab(currentTabId());
-  const config = key ? FORMS[key] : null;
-  const shouldShow = isLoggedIn && config;
-
-  openBtn.hidden = !shouldShow;
-  if (shouldShow) openBtn.textContent = config.button;
-
-  if (!shouldShow && !section.hidden) closeForm();
-}
-
-/* ---------- Открыть/закрыть ---------- */
-
-function openForm() {
-  const key = formKeyForTab(currentTabId());
-  const config = key ? FORMS[key] : null;
-  if (!config) return;
-
-  renderForm(config);
-  section.hidden = false;
-  openBtn.hidden = true;
-  clearMessage();
-  fieldsEl.querySelector('input, textarea, select')?.focus();
-}
-
-function closeForm() {
-  section.hidden = true;
-  formEl.reset();
-  clearMessage();
-  updateButtonVisibility();
-}
-
-/* ---------- Сообщения ---------- */
-
-function showMessage(text, type = '') {
-  message.textContent = text;
-  message.classList.remove('is-error', 'is-success');
-  if (type) message.classList.add(type);
-}
-
-function clearMessage() {
-  message.textContent = '';
-  message.classList.remove('is-error', 'is-success');
-}
-
-/* ---------- Вход ---------- */
-
-supabase.auth.getSession().then(({ data: { session } }) => {
-  isLoggedIn = !!session;
-  updateButtonVisibility();
-});
-
-supabase.auth.onAuthStateChange((_event, session) => {
-  isLoggedIn = !!session;
-  updateButtonVisibility();
-});
-
-/* ---------- Смена вкладки ---------- */
-
-window.addEventListener('hashchange', updateButtonVisibility);
-
-/* ---------- Кнопки ---------- */
-
-openBtn?.addEventListener('click', openForm);
-cancelBtn?.addEventListener('click', closeForm);
-
-/* ---------- Отправка ---------- */
-
-formEl?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  clearMessage();
-
-  const key = formKeyForTab(currentTabId());
-  const config = key ? FORMS[key] : null;
-  if (!config) return;
-
-  const values = collectValues(config);
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Сохраняем...';
+  const tab = TABS[state.tab];
+  if (!tab.renderControls) return;
 
   try {
-    const row = await config.toRow(values);
-    const { error } = await supabase.from(config.table).insert(row);
-    if (error) throw error;
-
-    showMessage('Сохранено!', 'is-success');
-    formEl.reset();
-
-    setTimeout(() => {
-      closeForm();
-      // app.js слушает это событие и перерисовывает активную вкладку
-      document.dispatchEvent(new CustomEvent('data:updated', { detail: { table: config.table } }));
-    }, 800);
-
-  } catch (err) {
-    console.error(err);
-    showMessage('Ошибка: ' + (err.message || err), 'is-error');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Сохранить';
+    const node = await tab.renderControls(state, ctx);
+    if (token !== controlsToken) return;
+    if (node) els.subcontrols.append(node);
+  } catch (error) {
+    console.error(error);
   }
+}
+
+/* ---------- Боковая карточка (sheet) ---------- */
+
+function markActive(id) {
+  const idStr = id == null ? null : String(id);
+  els.view.querySelectorAll('[data-settlement], [data-entry]').forEach((node) => {
+    const isActive =
+      (node.dataset.settlement && node.dataset.settlement === idStr) ||
+      (node.dataset.entry && node.dataset.entry === idStr);
+    node.classList.toggle('is-active', isActive);
+  });
+}
+
+function selectEntry(entry, trigger) {
+  sheetTrigger = trigger;
+  els.sheetBody.replaceChildren(renderEntryDetails(entry));
+  els.sheet.hidden = false;
+  markActive(entry.id);
+  els.sheetClose.focus();
+}
+
+function closeSheet(restoreFocus = true) {
+  if (els.sheet.hidden) return;
+  els.sheet.hidden = true;
+  markActive(null);
+  if (restoreFocus && sheetTrigger && sheetTrigger.isConnected) sheetTrigger.focus();
+  sheetTrigger = null;
+}
+
+/* ---------- Вкладки ---------- */
+
+function showTab(name) {
+  state.tab = name;
+  state.query = '';
+  state.kind = 'all';
+  els.search.value = '';
+  closeSheet(false);
+  renderChrome();
+  renderControls();
+  renderResults();
+}
+
+/* ---------- События ---------- */
+
+els.tabs.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-tab]');
+  if (!button) return;
+  if (location.hash === `#${button.dataset.tab}`) return;
+  location.hash = button.dataset.tab;
 });
+
+els.worldSwitch.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-world]');
+  if (!button || button.dataset.world === state.world) return;
+  state.world = button.dataset.world;
+  state.kind = 'all';
+  writeSetting('world', state.world);
+  renderChrome();
+  renderControls();
+  renderResults();
+});
+
+els.search.addEventListener('input', () => {
+  state.query = els.search.value;
+  renderResults();
+});
+
+els.sheetClose.addEventListener('click', () => closeSheet());
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeSheet();
+});
+
+window.addEventListener('hashchange', () => showTab(tabFromHash()));
+
+document.addEventListener('data:updated', () => {
+  renderControls();
+  renderResults();
+});
+
+/* ---------- Старт ---------- */
+
+document.title = config.title;
+els.title.textContent = config.title;
+showTab(tabFromHash());
