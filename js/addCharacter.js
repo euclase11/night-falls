@@ -64,16 +64,22 @@ async function uploadImage(file) {
   const ext = file.name.split('.').pop() || 'jpg';
   const fileName = `characters/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
+  // Конвертируем File в ArrayBuffer
+  const arrayBuffer = await file.arrayBuffer();
+
   const { error } = await supabase.storage
     .from('images')
-    .upload(fileName, file, { cacheControl: '3600', upsert: false });
+    .upload(fileName, arrayBuffer, {
+      contentType: file.type,   // явно указываем тип
+      cacheControl: '3600',
+      upsert: false,
+    });
 
   if (error) throw error;
 
   const { data } = supabase.storage.from('images').getPublicUrl(fileName);
   return data.publicUrl;
 }
-
 // --- Отправка формы ---
 form?.addEventListener('submit', async (e) => {
   e.preventDefault();
