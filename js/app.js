@@ -3,6 +3,7 @@ import { config } from './config.js';
 import { h } from './util.js';
 import { renderEntryDetails, renderSkeleton } from './render.js';
 import { TABS } from './tabs/index.js';
+import { store, invalidateCache } from './store.js';   // ← store уже не импортируется в app.js, но на всякий случай
 
 const DEFAULT_TAB = 'timeline';
 
@@ -104,11 +105,7 @@ async function renderResults({ skeleton = false } = {}) {
   clearTimeout(renderSkeletonTimer);
 
   if (useSkeleton) {
-    renderSkeletonTimer = setTimeout(() => {
-      if (token === renderToken) {
-        els.view.replaceChildren(renderSkeleton());
-      }
-    }, 100);
+    els.view.replaceChildren(renderSkeleton());
   } else {
     els.view.classList.add('is-busy');
   }
@@ -223,7 +220,9 @@ document.addEventListener('keydown', (event) => {
 
 window.addEventListener('hashchange', () => showTab(tabFromHash()));
 
-document.addEventListener('data:updated', () => {
+document.addEventListener('data:updated', (event) => {
+  const table = event.detail?.table;
+  invalidateCache(table);           // сбросим кэш изменённой таблицы
   renderControls();
   renderResults();
 });

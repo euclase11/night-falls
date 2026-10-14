@@ -2,19 +2,37 @@
 import { Character, Settlement, Event, MiscEntry } from './models.js';
 
 /**
- * Слой данных для app.js.
- * Каждая функция возвращает Promise с массивом объектов в форме карточки.
- * В каждую карточку добавлено поле table — пригодится для редактирования/удаления.
+ * Кэш загруженных данных. Пока ничего не менялось —
+ * повторные обращения к Supabase не идут.
  */
+const cache = {
+  characters: null,
+  settlements: null,
+  events: null,
+  other: null,
+};
+
+/** Сбросить кэш (после добавления/редактирования/удаления). */
+export function invalidateCache(table) {
+  if (table) {
+    if (table in cache) cache[table] = null;
+  } else {
+    for (const key of Object.keys(cache)) cache[key] = null;
+  }
+}
+
 export const store = {
   async characters() {
+    if (cache.characters) return cache.characters;
     const list = await Character.list();
-    return list.map((c) => ({ ...c.toCard(), table: 'characters' }));
+    cache.characters = list.map((c) => ({ ...c.toCard(), table: 'characters' }));
+    return cache.characters;
   },
 
   async settlements() {
+    if (cache.settlements) return cache.settlements;
     const list = await Settlement.list();
-    return list.map((s) => {
+    cache.settlements = list.map((s) => {
       const coords = s.coordinates || {};
       return {
         id: s.id,
@@ -30,14 +48,16 @@ export const store = {
         kind: 'Поселение',
         meta: null,
         tags: [],
-        imageUrl: null, // у поселений пока нет картинок
+        imageUrl: null,
       };
     });
+    return cache.settlements;
   },
 
   async events() {
+    if (cache.events) return cache.events;
     const list = await Event.list();
-    return list.map((e) => ({
+    cache.events = list.map((e) => ({
       id: e.id,
       table: 'events',
       world: e.world,
@@ -46,17 +66,19 @@ export const store = {
       scope: e.scope,
       date: e.date,
       order: e.order,
-      // карточная форма
       name: e.title,
       kind: 'Событие',
       meta: e.date,
       tags: [],
       imageUrl: null,
     }));
+    return cache.events;
   },
 
   async other() {
+    if (cache.other) return cache.other;
     const list = await MiscEntry.list();
-    return list.map((m) => ({ ...m.toCard(), table: 'misc' }));
+    cache.other = list.map((m) => ({ ...m.toCard(), table: 'misc' }));
+    return cache.other;
   },
 };
