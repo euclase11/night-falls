@@ -60,7 +60,7 @@ export const FORMS = {
     button: '+ Добавить персонажа',
     fields: [
       { name: 'name', label: 'Имя', type: 'text', required: true, maxLength: 80 },
-      { name: 'description', label: 'Описание', type: 'textarea', rows: 4, maxLength: 2000 },
+      { name: 'description', label: 'Описание', type: 'textarea', rows: 4, maxLength: 20000 },
       WORLD_FIELD,
       { name: 'image', label: 'Главная картинка', type: 'file', accept: 'image/*' },
       IMAGES_FIELD,

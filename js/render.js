@@ -105,7 +105,7 @@ export function renderEntries(items, emptyText, onSelect) {
           item.kind ? h('span', { class: 'entry-kind' }, item.kind) : null
         ),
         item.meta ? h('p', { class: 'entry-meta' }, item.meta) : null,
-        h('p', {}, item.description),
+        h('p', { class: 'entry-desc' }, item.description),
         renderTags(item.tags)
       );
 

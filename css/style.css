@@ -1294,3 +1294,13 @@ body[data-world="afterlife"] #entry-form-message.is-success {
 .lightbox {
   transition: opacity 0.25s ease;
 }
+
+/* Обрезка длинного описания в карточке списка */
+.entry-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;          /* максимум 3 строки */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0.4rem 0 0;
+}
