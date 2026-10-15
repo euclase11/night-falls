@@ -1269,7 +1269,7 @@ body[data-world="afterlife"] #entry-form-message.is-success {
 
 @font-face {
   font-family: "Symbols Nerd Font";
-  src: url("../assets/fonts/SymbolsNerdFont-Regular.ttf") format("truetype");
+  src: url("../assets/fonts/icons.woff") format("woff");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
