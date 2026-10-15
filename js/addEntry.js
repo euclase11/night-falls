@@ -128,10 +128,11 @@ function renderImagesField(field, prefill) {
                 draw();
               },
             },
-            '×'
+            h('span', { class: 'icon icon-close', 'aria-hidden': 'true' })
           )
         )
       )
+    )
     );
   }
 
@@ -341,7 +342,7 @@ formEl?.addEventListener('submit', async (e) => {
   submitBtn.disabled = true;
   submitBtn.textContent = 'Сохраняем...';
 
-    try {
+  try {
     const previous = editing?.raw;
     const row = await config.toRow(values, previous);
     const query = editing

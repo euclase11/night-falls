@@ -127,13 +127,31 @@ export function renderEntries(items, emptyText, onSelect) {
 
 /* ---------- Универсальный бланк записи ---------- */
 
+function icon(name) {
+  return h('span', { class: `icon icon-${name}`, 'aria-hidden': 'true' });
+}
+
+function iconButton(name, label, onClick, extraClass = '') {
+  return h(
+    'button',
+    {
+      type: 'button',
+      class: `icon-btn ${extraClass}`.trim(),
+      'aria-label': label,
+      title: label,
+      onClick,
+    },
+    icon(name)
+  );
+}
+
 function openLightbox(urls, startIndex = 0) {
   let index = startIndex;
   const img = h('img', { class: 'lightbox-image', alt: '' });
   const counter = h('span', { class: 'lightbox-counter' });
   const prev = h('button', { type: 'button', class: 'lightbox-nav lightbox-prev', 'aria-label': 'Предыдущее', onClick: () => show(index - 1) }, '‹');
   const next = h('button', { type: 'button', class: 'lightbox-nav lightbox-next', 'aria-label': 'Следующее', onClick: () => show(index + 1) }, '›');
-  const closeBtn = h('button', { type: 'button', class: 'lightbox-close', 'aria-label': 'Закрыть', onClick: close }, '×');
+  const closeBtn = h('button', { type: 'button', class: 'lightbox-close', 'aria-label': 'Закрыть', title: 'Закрыть', onClick: close }, icon('close'));
   const overlay = h('div', { class: 'lightbox', role: 'dialog', 'aria-modal': 'true' }, closeBtn, prev, img, next, counter);
 
   function show(i) {
@@ -226,13 +244,13 @@ export function renderEntryDetails(entry, { canEdit = false, onOpen, onBack, onE
   return h(
     'div',
     { class: 'entry-details' },
-    onBack ? h('button', { type: 'button', class: 'details-back', onClick: onBack }, '← Назад') : null,
+    onBack ? h('button', { type: 'button', class: 'details-back', onClick: onBack }, icon('back'), 'Назад') : null,
     entry.imageUrl
       ? h(
-          'button',
-          { type: 'button', class: 'details-image-button', 'aria-label': 'Открыть изображение', onClick: () => openLightbox(gallery, 0) },
-          h('img', { class: 'details-image', src: entry.imageUrl, alt: entry.name })
-        )
+        'button',
+        { type: 'button', class: 'details-image-button', 'aria-label': 'Открыть изображение', onClick: () => openLightbox(gallery, 0) },
+        h('img', { class: 'details-image', src: entry.imageUrl, alt: entry.name })
+      )
       : null,
     h('h2', {}, entry.name),
     entry.kind ? h('p', { class: 'details-kind' }, entry.kind) : null,
@@ -243,11 +261,11 @@ export function renderEntryDetails(entry, { canEdit = false, onOpen, onBack, onE
     renderRefList('Упоминается в', () => store.backlinks(entry), onOpen),
     canEdit
       ? h(
-          'div',
-          { class: 'details-actions' },
-          h('button', { type: 'button', onClick: onEdit }, 'Редактировать'),
-          h('button', { type: 'button', class: 'danger', onClick: onDelete }, 'Удалить')
-        )
+        'div',
+        { class: 'details-actions' },
+        iconButton('edit', 'Редактировать', onEdit),
+        iconButton('trash', 'Удалить', onDelete, 'danger')
+      )
       : null
   );
 }

@@ -5,10 +5,25 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>наступает ночь</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&family=Jost:wght@300;400;500&family=Oswald:wght@500;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/theme.css">
 </head>
 
 <body data-world="real">
+  <div class="atmosphere" aria-hidden="true">
+    <div class="atm-furnace"></div>
+    <div class="atm-sky"></div>
+    <div class="atm-field"></div>
+    <div class="atm-train"></div>
+    <div class="atm-fog atm-fog-a"></div>
+    <div class="atm-fog atm-fog-b"></div>
+    <div class="atm-grain"></div>
+  </div>
 
   <header class="top">
     <h1 class="title" id="site-title">наступает ночь</h1>
@@ -17,14 +32,6 @@
       <button type="button" data-world="real" aria-pressed="true">Реальный мир</button>
       <button type="button" data-world="afterlife" aria-pressed="false">Посмертие</button>
     </div>
-    <p style="padding: 1rem; font-size: 1.5rem;">
-      Тест иконок:
-      <span class="icon">&#xf067;</span> <!-- плюс -->
-      <span class="icon">&#xf00d;</span> <!-- крестик -->
-      <span class="icon">&#xf002;</span> <!-- лупа -->
-      <span class="icon">&#xf040;</span> <!-- карандаш -->
-      <span class="icon">&#xf014;</span> <!-- корзина -->
-    </p>
 
     <!-- Блок для входа/выхода редактора -->
     <div id="auth-container">
@@ -32,7 +39,6 @@
         <input type="email" id="email" placeholder="Email" required>
         <input type="password" id="password" placeholder="Пароль" required>
         <button type="submit">Войти</button>
-        <button type="button" id="signup-btn">Зарегистрироваться</button>
       </form>
       <p id="auth-message"></p>
     </div>
@@ -74,7 +80,9 @@
   </button>
 
   <aside class="sheet" id="sheet" role="dialog" aria-label="Описание записи" hidden>
-    <button type="button" class="sheet-close" id="sheet-close">Закрыть</button>
+    <button type="button" class="sheet-close icon-btn" id="sheet-close" aria-label="Закрыть" title="Закрыть">
+      <span class="icon icon-close" aria-hidden="true"></span>
+    </button>
     <div id="sheet-body"></div>
   </aside>
 
