@@ -479,3 +479,24 @@ body[data-world="afterlife"] :is(#auth-message, #entry-form-message).is-success 
         transform: none;
     }
 }
+
+.map-legend {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 0.15rem;
+}
+
+.legend-item {
+  padding: 0.4rem 0;
+  text-align: left;
+}
+
+body[data-auth="in"] main {
+  padding-bottom: 5.5rem;
+}
+
+@media (max-width: 40rem) {
+  body[data-auth="in"] main {
+    padding-bottom: 9rem;
+  }
+}
