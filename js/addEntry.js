@@ -276,7 +276,15 @@ export function openForm(key, prefill = {}, entry = null) {
 
   activeKey = key;
   editing = entry ? { id: entry.id, table: entry.table, raw: entry.raw } : null;
-  if (entry) prefill = config.toValues ? config.toValues(entry.raw) : entry.raw;
+
+  if (entry) {
+    // Редактирование: значения берём из самой записи
+    prefill = config.toValues ? config.toValues(entry.raw) : entry.raw;
+  } else {
+    // Создание новой: по умолчанию подставляем мир, выбранный на сайте
+    const currentWorld = document.body.dataset.world === 'afterlife' ? 'afterlife' : 'real';
+    prefill = { ...prefill, world: prefill.world ?? currentWorld };
+  }
 
   renderForm(config, prefill);
   section.hidden = false;

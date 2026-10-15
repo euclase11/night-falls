@@ -9,7 +9,6 @@ const WORLD_FIELD = {
     ['real', 'Реальный мир'],
     ['afterlife', 'Посмертие'],
   ],
-  default: 'real',
 };
 
 const LINKS_FIELD = { name: 'links', label: 'Связанные записи', type: 'links' };
