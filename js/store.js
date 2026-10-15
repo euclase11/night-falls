@@ -86,7 +86,7 @@ export const store = {
       description: e.description,
       scope: e.scope,
       date: e.date,
-      order: e.order,
+      order: e.sort_order ?? e.order,
       name: e.title,
       kind: 'Событие',
       meta: e.date,

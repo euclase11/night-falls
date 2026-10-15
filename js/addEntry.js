@@ -105,6 +105,40 @@ function renderLinksField(field, prefill) {
   return group;
 }
 
+function renderPositionField(field) {
+  const select = h('select', {});
+  const wrapper = h('label', { id: `field-${field.name}` }, field.label, select);
+
+  function add(value, text) {
+    select.append(h('option', { value }, text));
+  }
+
+  add(editing ? 'keep' : 'end', editing ? 'Оставить на месте' : 'В самый конец');
+
+  wrapper.getValue = () => {
+    const value = select.value;
+    if (value.startsWith('after:')) return { mode: 'after', id: value.slice(6) };
+    return { mode: value };
+  };
+
+  store
+    .events()
+    .then((events) => {
+      const self = editing?.id;
+      const sorted = events.filter((e) => e.id !== self).sort((a, b) => a.order - b.order);
+
+      select.replaceChildren();
+      if (editing) add('keep', 'Оставить на месте');
+      add('start', 'В самое начало');
+      for (const e of sorted) add(`after:${e.id}`, `После: ${e.name}${e.date ? ` (${e.date})` : ''}`);
+      add('end', 'В самый конец');
+      select.value = editing ? 'keep' : 'end';
+    })
+    .catch(console.error);
+
+  return wrapper;
+}
+
 function renderImagesField(field, prefill) {
   const keep = new Set(Array.isArray(prefill[field.name]) ? prefill[field.name] : []);
   const strip = h('div', { class: 'images-strip' });
@@ -141,6 +175,7 @@ function renderImagesField(field, prefill) {
 }
 
 function renderField(field, prefill = {}) {
+  if (field.type === 'position') return renderPositionField(field);
   if (field.type === 'links') return renderLinksField(field, prefill);
   if (field.type === 'images') return renderImagesField(field, prefill);
 
@@ -217,7 +252,7 @@ function collectValues(config) {
   const values = {};
   for (const field of config.fields) {
     const node = fieldsEl.querySelector(`#field-${field.name}`);
-    if (field.type === 'links' || field.type === 'images') values[field.name] = node.getValue();
+    if (field.type === 'links' || field.type === 'images' || field.type === 'position') values[field.name] = node.getValue();
     else if (field.type === 'file') values[field.name] = node.files[0] || null;
     else values[field.name] = node.value;
   }

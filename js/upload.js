@@ -7,16 +7,46 @@ import { supabase } from './supabase.js';
  * @param {File} file
  * @returns {Promise<string>} публичный URL
  */
+const MAX_SIDE = 1600;
+const QUALITY = 0.82;
+
+async function compressImage(file) {
+  if (!file.type.startsWith('image/')) return file;
+  if (file.type === 'image/gif' || file.type === 'image/svg+xml') return file;
+
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const ratio = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const width = Math.round(bitmap.width * ratio);
+    const height = Math.round(bitmap.height * ratio);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', QUALITY));
+    if (!blob || blob.type !== 'image/webp' || blob.size >= file.size) return file;
+    return blob;
+  } catch (error) {
+    console.error(error);
+    return file;
+  }
+}
+
 export async function uploadFile(folder, file) {
-  const ext = file.name.split('.').pop() || 'bin';
+  const prepared = await compressImage(file);
+  const type = prepared.type || file.type;
+  const ext = type === 'image/webp' ? 'webp' : file.name.split('.').pop() || 'bin';
   const path = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
-  const buffer = await file.arrayBuffer();
+  const buffer = await prepared.arrayBuffer();
 
   const { error } = await supabase.storage
     .from('images')
     .upload(path, buffer, {
-      contentType: file.type,
+      contentType: type,
       cacheControl: '3600',
       upsert: false,
     });

@@ -1,4 +1,5 @@
 import { uploadFile } from './upload.js';
+import { store } from './store.js';
 
 const WORLD_FIELD = {
   name: 'world',
@@ -12,11 +13,35 @@ const WORLD_FIELD = {
 };
 
 const LINKS_FIELD = { name: 'links', label: 'Связанные записи', type: 'links' };
+const POSITION_FIELD = { name: 'position', label: 'Положение на таймлайне', type: 'position' };
+
+async function resolveOrder(position, existing) {
+  if (position.mode === 'keep' && existing?.sort_order != null) return existing.sort_order;
+
+  const others = (await store.events())
+    .filter((e) => e.id !== existing?.id)
+    .sort((a, b) => a.order - b.order);
+
+  if (!others.length) return 1;
+  if (position.mode === 'start') return others[0].order - 1;
+
+  if (position.mode === 'after') {
+    const index = others.findIndex((e) => String(e.id) === position.id);
+    if (index !== -1) {
+      const current = others[index].order;
+      const next = others[index + 1];
+      return next ? (current + next.order) / 2 : current + 1;
+    }
+  }
+
+  return others[others.length - 1].order + 1;
+}
+
 const IMAGES_FIELD = { name: 'images', label: 'Связанные изображения', type: 'images' };
 
 function checkImage(file) {
   if (!file.type.startsWith('image/')) throw new Error('Файл должен быть изображением');
-  if (file.size > 5 * 1024 * 1024) throw new Error('Картинка больше 5 МБ');
+  if (file.size > 15 * 1024 * 1024) throw new Error('Картинка больше 15 МБ');
 }
 
 async function resolveImages(folder, value) {
@@ -74,16 +99,18 @@ export const FORMS = {
         default: 'global',
       },
       { name: 'date', label: 'Дата (как показывать на таймлайне)', type: 'text' },
+      POSITION_FIELD,
       IMAGES_FIELD,
       LINKS_FIELD,
     ],
-    async toRow(v) {
+    async toRow(v, existing) {
       return {
         title: v.title.trim(),
         description: v.description.trim(),
         world: v.world,
         scope: v.scope,
         date: v.date.trim() || null,
+        sort_order: await resolveOrder(v.position, existing),
         images: await resolveImages('events', v.images),
         links: v.links,
       };
