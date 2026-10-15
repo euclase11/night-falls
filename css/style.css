@@ -1266,3 +1266,21 @@ body[data-world="afterlife"] #entry-form-message.is-success {
   font-size: 0.9rem;
   transform: translateX(-50%);
 }
+
+@font-face {
+  font-family: "Symbols Nerd Font";
+  src: url("../assets/fonts/SymbolsNerdFont-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.icon {
+  font-family: "Symbols Nerd Font", sans-serif;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: -0.05em;
+  font-size: 1.1em;
+}
