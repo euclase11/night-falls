@@ -1,5 +1,6 @@
 // js/render.js
 import { h, readableText } from './util.js';
+import { store, REF_LABELS } from './store.js';
 
 function applyColor(node, color) {
   if (!color) return;
@@ -126,7 +127,54 @@ export function renderEntries(items, emptyText, onSelect) {
 
 /* ---------- Универсальный бланк записи ---------- */
 
-export function renderEntryDetails(entry) {
+function renderRelatedImages(urls) {
+  if (!urls || !urls.length) return null;
+  return h(
+    'div',
+    { class: 'related' },
+    h('h3', {}, 'Изображения'),
+    h(
+      'div',
+      { class: 'related-images' },
+      urls.map((url) =>
+        h('a', { href: url, target: '_blank', rel: 'noopener' }, h('img', { src: url, alt: '', loading: 'lazy' }))
+      )
+    )
+  );
+}
+
+function renderRelatedLinks(keys, onOpen) {
+  if (!keys || !keys.length) return null;
+  const list = h('ul', { class: 'related-links' });
+  const box = h('div', { class: 'related' }, h('h3', {}, 'Связано'), list);
+  box.hidden = true;
+
+  store
+    .resolve(keys)
+    .then((items) => {
+      if (!items.length) return;
+      list.replaceChildren(
+        ...items.map((item) =>
+          h(
+            'li',
+            {},
+            h(
+              'button',
+              { type: 'button', onClick: () => onOpen?.(item) },
+              h('span', { class: 'related-kind' }, REF_LABELS[item.table]),
+              item.name
+            )
+          )
+        )
+      );
+      box.hidden = false;
+    })
+    .catch(console.error);
+
+  return box;
+}
+
+export function renderEntryDetails(entry, { canEdit = false, onOpen, onEdit, onDelete } = {}) {
   return h(
     'div',
     { class: 'entry-details' },
@@ -136,7 +184,40 @@ export function renderEntryDetails(entry) {
     h('h2', {}, entry.name),
     entry.kind ? h('p', { class: 'details-kind' }, entry.kind) : null,
     entry.meta ? h('p', { class: 'details-meta' }, entry.meta) : null,
-    h('p', {}, entry.description)
+    h('p', {}, entry.description),
+    renderRelatedImages(entry.images),
+    renderRelatedLinks(entry.links, onOpen),
+    canEdit
+      ? h(
+          'div',
+          { class: 'details-actions' },
+          h('button', { type: 'button', onClick: onEdit }, 'Редактировать'),
+          h('button', { type: 'button', class: 'danger', onClick: onDelete }, 'Удалить')
+        )
+      : null
+  );
+}
+
+export function renderGallery(items, emptyText, onSelect) {
+  if (!items.length) return renderEmpty(emptyText);
+
+  return h(
+    'ul',
+    { class: 'gallery' },
+    items.map((item) => {
+      const button = h(
+        'button',
+        {
+          type: 'button',
+          class: 'gallery-item',
+          dataset: item.id ? { entry: String(item.id) } : {},
+          onClick: () => onSelect(item, button),
+        },
+        h('img', { src: item.imageUrl, alt: item.name, loading: 'lazy' }),
+        h('span', {}, item.name)
+      );
+      return h('li', {}, button);
+    })
   );
 }
 

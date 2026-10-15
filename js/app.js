@@ -3,7 +3,8 @@ import { config } from './config.js';
 import { h } from './util.js';
 import { renderEntryDetails, renderSkeleton } from './render.js';
 import { TABS } from './tabs/index.js';
-import { store, invalidateCache } from './store.js';   // ← store уже не импортируется в app.js, но на всякий случай
+import { store, invalidateCache } from './store.js';   
+import { editEntry, deleteEntry } from './addEntry.js';
 
 const DEFAULT_TAB = 'timeline';
 
@@ -160,7 +161,19 @@ function markActive(id) {
 
 function selectEntry(entry, trigger) {
   sheetTrigger = trigger;
-  els.sheetBody.replaceChildren(renderEntryDetails(entry));
+  els.sheetBody.replaceChildren(
+    renderEntryDetails(entry, {
+      canEdit: document.body.dataset.auth === 'in',
+      onOpen: (next) => selectEntry(next, sheetTrigger),
+      onEdit: () => {
+        closeSheet(false);
+        editEntry(entry);
+      },
+      onDelete: async () => {
+        if (await deleteEntry(entry)) closeSheet(false);
+      },
+    })
+  );
   els.sheet.hidden = false;
   markActive(entry.id);
   els.sheetClose.focus();
@@ -222,7 +235,8 @@ window.addEventListener('hashchange', () => showTab(tabFromHash()));
 
 document.addEventListener('data:updated', (event) => {
   const table = event.detail?.table;
-  invalidateCache(table);           // сбросим кэш изменённой таблицы
+  invalidateCache(table);
+  closeSheet(false);
   renderControls();
   renderResults();
 });

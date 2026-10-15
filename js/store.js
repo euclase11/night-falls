@@ -1,31 +1,51 @@
-// js/store.js
-import { Character, Settlement, Event, MiscEntry } from './models.js';
+import { Character, Settlement, Event, MiscEntry, GalleryItem } from './models.js';
 
-/**
- * Кэш загруженных данных. Пока ничего не менялось —
- * повторные обращения к Supabase не идут.
- */
+export const REF_LABELS = {
+  characters: 'Персонаж',
+  settlements: 'Поселение',
+  events: 'Событие',
+  misc: 'Запись',
+  gallery: 'Галерея',
+};
+
 const cache = {
   characters: null,
   settlements: null,
   events: null,
   other: null,
+  gallery: null,
 };
 
-/** Сбросить кэш (после добавления/редактирования/удаления). */
+const TABLE_TO_CACHE = {
+  characters: 'characters',
+  settlements: 'settlements',
+  events: 'events',
+  misc: 'other',
+  gallery: 'gallery',
+};
+
 export function invalidateCache(table) {
   if (table) {
-    if (table in cache) cache[table] = null;
+    const key = TABLE_TO_CACHE[table];
+    if (key) cache[key] = null;
   } else {
     for (const key of Object.keys(cache)) cache[key] = null;
   }
+}
+
+function extras(row) {
+  return {
+    raw: { ...row },
+    links: Array.isArray(row.links) ? row.links : [],
+    images: Array.isArray(row.images) ? row.images : [],
+  };
 }
 
 export const store = {
   async characters() {
     if (cache.characters) return cache.characters;
     const list = await Character.list();
-    cache.characters = list.map((c) => ({ ...c.toCard(), table: 'characters' }));
+    cache.characters = list.map((c) => ({ ...c.toCard(), table: 'characters', ...extras(c) }));
     return cache.characters;
   },
 
@@ -49,6 +69,7 @@ export const store = {
         meta: null,
         tags: [],
         imageUrl: null,
+        ...extras(s),
       };
     });
     return cache.settlements;
@@ -71,6 +92,7 @@ export const store = {
       meta: e.date,
       tags: [],
       imageUrl: null,
+      ...extras(e),
     }));
     return cache.events;
   },
@@ -78,7 +100,43 @@ export const store = {
   async other() {
     if (cache.other) return cache.other;
     const list = await MiscEntry.list();
-    cache.other = list.map((m) => ({ ...m.toCard(), table: 'misc' }));
+    cache.other = list.map((m) => ({ ...m.toCard(), table: 'misc', ...extras(m) }));
     return cache.other;
+  },
+
+  async gallery() {
+    if (cache.gallery) return cache.gallery;
+    const list = await GalleryItem.list();
+    cache.gallery = list.map((g) => ({
+      id: g.id,
+      table: 'gallery',
+      world: g.world,
+      name: g.title,
+      description: g.description ?? '',
+      kind: 'Галерея',
+      meta: null,
+      tags: [],
+      imageUrl: g.image_url,
+      createdAt: g.created_at ?? '',
+      ...extras(g),
+    }));
+    return cache.gallery;
+  },
+
+  async all() {
+    const lists = await Promise.all([
+      this.characters(),
+      this.settlements(),
+      this.events(),
+      this.other(),
+      this.gallery(),
+    ]);
+    return lists.flat();
+  },
+
+  async resolve(keys) {
+    const all = await this.all();
+    const byKey = new Map(all.map((entry) => [`${entry.table}:${entry.id}`, entry]));
+    return keys.map((key) => byKey.get(key)).filter(Boolean);
   },
 };

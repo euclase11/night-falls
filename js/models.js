@@ -193,3 +193,7 @@ export class MiscEntry extends Entry {
     };
   }
 }
+
+export class GalleryItem extends Entry {
+  static table = 'gallery';
+}

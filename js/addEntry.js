@@ -1,6 +1,7 @@
-// js/addEntry.js
 import { supabase } from './supabase.js';
 import { FORMS } from './forms.js';
+import { store, REF_LABELS } from './store.js';
+import { h } from './util.js';
 
 const section = document.getElementById('entry-form-section');
 const formEl = document.getElementById('entry-form');
@@ -11,26 +12,128 @@ const submitBtn = document.getElementById('entry-submit');
 const cancelBtn = document.getElementById('entry-cancel');
 const openBtn = document.getElementById('open-entry-form');
 
-let isLoggedIn = false;
+const TAB_FORMS = {
+  characters: 'characters',
+  timeline: 'events',
+  map: 'settlements',
+  other: 'misc',
+  gallery: 'gallery',
+};
 
-/* ---------- Привязка формы к вкладке ---------- */
+let isLoggedIn = false;
+let activeKey = null;
+let editing = null;
 
 function formKeyForTab(tabId) {
-  switch (tabId) {
-    case 'characters': return 'characters';
-    case 'timeline': return 'events';
-    case 'map': return 'settlements';
-    default: return null;
-  }
+  return TAB_FORMS[tabId] ?? null;
 }
 
 function currentTabId() {
   return location.hash.replace('#', '') || 'timeline';
 }
 
-/* ---------- Рендер полей ---------- */
+function renderLinksField(field, prefill) {
+  const selected = new Set(Array.isArray(prefill[field.name]) ? prefill[field.name] : []);
+  const self = editing ? `${editing.table}:${editing.id}` : null;
+
+  const filter = h('input', { type: 'search', class: 'links-filter', placeholder: 'Найти запись' });
+  const list = h('ul', { class: 'links-list' }, h('li', { class: 'links-hint' }, 'Загрузка...'));
+  const group = h('div', { class: 'field-group', id: `field-${field.name}` }, h('span', {}, field.label), filter, list);
+
+  group.getValue = () => [...selected];
+
+  filter.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') event.preventDefault();
+  });
+
+  store
+    .all()
+    .then((items) => {
+      const options = items
+        .filter((entry) => `${entry.table}:${entry.id}` !== self)
+        .map((entry) => ({
+          key: `${entry.table}:${entry.id}`,
+          label: `${REF_LABELS[entry.table]}: ${entry.name}`,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label, 'ru'));
+
+      const existing = new Set(options.map((option) => option.key));
+      for (const key of [...selected]) {
+        if (!existing.has(key)) selected.delete(key);
+      }
+
+      if (!options.length) {
+        list.replaceChildren(h('li', { class: 'links-hint' }, 'Пока нет записей для связи'));
+        return;
+      }
+
+      const rows = options.map((option) => {
+        const checkbox = h('input', { type: 'checkbox' });
+        checkbox.checked = selected.has(option.key);
+        checkbox.addEventListener('change', () => {
+          if (checkbox.checked) selected.add(option.key);
+          else selected.delete(option.key);
+        });
+        const row = h('li', {}, h('label', {}, checkbox, option.label));
+        row.dataset.text = option.label.toLowerCase().replaceAll('ё', 'е');
+        return row;
+      });
+      list.replaceChildren(...rows);
+
+      filter.addEventListener('input', () => {
+        const needle = filter.value.toLowerCase().replaceAll('ё', 'е').trim();
+        rows.forEach((row) => {
+          row.hidden = needle !== '' && !row.dataset.text.includes(needle);
+        });
+      });
+    })
+    .catch((error) => {
+      console.error(error);
+      list.replaceChildren(h('li', { class: 'links-hint' }, 'Не удалось загрузить список'));
+    });
+
+  return group;
+}
+
+function renderImagesField(field, prefill) {
+  const keep = new Set(Array.isArray(prefill[field.name]) ? prefill[field.name] : []);
+  const strip = h('div', { class: 'images-strip' });
+  const input = h('input', { type: 'file', accept: 'image/*', multiple: true });
+  const group = h('div', { class: 'field-group', id: `field-${field.name}` }, h('span', {}, field.label), strip, input);
+
+  function draw() {
+    strip.replaceChildren(
+      ...[...keep].map((url) =>
+        h(
+          'div',
+          { class: 'images-item' },
+          h('img', { src: url, alt: '' }),
+          h(
+            'button',
+            {
+              type: 'button',
+              'aria-label': 'Убрать картинку',
+              onClick: () => {
+                keep.delete(url);
+                draw();
+              },
+            },
+            '×'
+          )
+        )
+      )
+    );
+  }
+
+  draw();
+  group.getValue = () => ({ keep: [...keep], files: [...input.files] });
+  return group;
+}
 
 function renderField(field, prefill = {}) {
+  if (field.type === 'links') return renderLinksField(field, prefill);
+  if (field.type === 'images') return renderImagesField(field, prefill);
+
   const wrapper = document.createElement('label');
   wrapper.textContent = field.label;
 
@@ -65,13 +168,11 @@ function renderField(field, prefill = {}) {
       input.step = field.step ?? 'any';
       break;
 
-    case 'color': {
+    case 'color':
       input = document.createElement('input');
       input.type = 'color';
-      // Значение по умолчанию — обязательно валидный hex
       input.value = field.default || '#ff5555';
       break;
-    }
 
     default:
       input = document.createElement('input');
@@ -84,15 +185,10 @@ function renderField(field, prefill = {}) {
   if (field.maxLength) input.maxLength = field.maxLength;
   if (field.placeholder) input.placeholder = field.placeholder;
 
-  // Предзаполнение (аккуратно с type="color")
-  if (prefill[field.name] != null && prefill[field.name] !== '') {
+  if (field.type !== 'file' && prefill[field.name] != null && prefill[field.name] !== '') {
     if (field.type === 'color') {
-      // Только если значение похоже на hex-цвет
       const candidate = String(prefill[field.name]).trim();
-      if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(candidate)) {
-        input.value = candidate;
-      }
-      // иначе оставляем default (уже установлен выше)
+      if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(candidate)) input.value = candidate;
     } else {
       input.value = prefill[field.name];
     }
@@ -103,56 +199,78 @@ function renderField(field, prefill = {}) {
 }
 
 function renderForm(config, prefill = {}) {
-  titleEl.textContent = config.title;
-  fieldsEl.replaceChildren(...config.fields.map((f) => renderField(f, prefill)));
+  titleEl.textContent = editing ? 'Редактирование' : config.title;
+  fieldsEl.replaceChildren(...config.fields.map((field) => renderField(field, prefill)));
 }
 
 function collectValues(config) {
   const values = {};
   for (const field of config.fields) {
-    const input = fieldsEl.querySelector(`#field-${field.name}`);
-    values[field.name] = field.type === 'file' ? input.files[0] || null : input.value;
+    const node = fieldsEl.querySelector(`#field-${field.name}`);
+    if (field.type === 'links' || field.type === 'images') values[field.name] = node.getValue();
+    else if (field.type === 'file') values[field.name] = node.files[0] || null;
+    else values[field.name] = node.value;
   }
   return values;
 }
-
-/* ---------- Видимость кнопки ---------- */
 
 function updateButtonVisibility() {
   const key = formKeyForTab(currentTabId());
   const config = key ? FORMS[key] : null;
   const shouldShow = isLoggedIn && config;
 
-  openBtn.hidden = !shouldShow;
+  openBtn.hidden = !shouldShow || !section.hidden;
   if (shouldShow) openBtn.textContent = config.button;
 
   if (!shouldShow && !section.hidden) closeForm();
 }
 
-/* ---------- Открытие/закрытие ---------- */
-
-export function openForm(key, prefill = {}) {
+export function openForm(key, prefill = {}, entry = null) {
   const config = FORMS[key];
   if (!config) return;
+
+  activeKey = key;
+  editing = entry ? { id: entry.id, table: entry.table, raw: entry.raw } : null;
+  if (entry) prefill = config.toValues ? config.toValues(entry.raw) : entry.raw;
 
   renderForm(config, prefill);
   section.hidden = false;
   openBtn.hidden = true;
   clearMessage();
   fieldsEl.querySelector('input, textarea, select')?.focus();
-
-  // Прокрутим к форме, если её не видно
   section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+export function editEntry(entry) {
+  if (!FORMS[entry.table]) return;
+  openForm(entry.table, {}, entry);
+}
+
+export async function deleteEntry(entry) {
+  if (!window.confirm(`Удалить «${entry.name}»?`)) return false;
+
+  const { data, error } = await supabase.from(entry.table).delete().eq('id', entry.id).select();
+  if (error) {
+    window.alert('Ошибка: ' + error.message);
+    return false;
+  }
+  if (!data || !data.length) {
+    window.alert('Не удалось удалить: нет прав или запись уже удалена.');
+    return false;
+  }
+
+  document.dispatchEvent(new CustomEvent('data:updated', { detail: { table: entry.table } }));
+  return true;
 }
 
 function closeForm() {
   section.hidden = true;
   formEl.reset();
   clearMessage();
+  activeKey = null;
+  editing = null;
   updateButtonVisibility();
 }
-
-/* ---------- Сообщения ---------- */
 
 function showMessage(text, type = '') {
   message.textContent = text;
@@ -164,8 +282,6 @@ function clearMessage() {
   message.textContent = '';
   message.classList.remove('is-error', 'is-success');
 }
-
-/* ---------- Вход ---------- */
 
 supabase.auth.getSession().then(({ data: { session } }) => {
   isLoggedIn = !!session;
@@ -179,22 +295,17 @@ supabase.auth.onAuthStateChange((_event, session) => {
 
 window.addEventListener('hashchange', updateButtonVisibility);
 
-/* ---------- Кнопки ---------- */
-
 openBtn?.addEventListener('click', () => {
   const key = formKeyForTab(currentTabId());
   if (key) openForm(key);
 });
 cancelBtn?.addEventListener('click', closeForm);
 
-/* ---------- Отправка ---------- */
-
 formEl?.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearMessage();
 
-  const key = formKeyForTab(currentTabId());
-  const config = key ? FORMS[key] : null;
+  const config = activeKey ? FORMS[activeKey] : null;
   if (!config) return;
 
   const values = collectValues(config);
@@ -203,18 +314,20 @@ formEl?.addEventListener('submit', async (e) => {
   submitBtn.textContent = 'Сохраняем...';
 
   try {
-    const row = await config.toRow(values);
-    const { error } = await supabase.from(config.table).insert(row);
+    const row = await config.toRow(values, editing?.raw);
+    const query = editing
+      ? supabase.from(config.table).update(row).eq('id', editing.id)
+      : supabase.from(config.table).insert(row);
+    const { data, error } = await query.select();
     if (error) throw error;
+    if (!data || !data.length) throw new Error('Нет прав на сохранение');
 
     showMessage('Сохранено!', 'is-success');
-    formEl.reset();
 
     setTimeout(() => {
       closeForm();
       document.dispatchEvent(new CustomEvent('data:updated', { detail: { table: config.table } }));
     }, 800);
-
   } catch (err) {
     console.error(err);
     showMessage('Ошибка: ' + (err.message || err), 'is-error');

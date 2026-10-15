@@ -507,7 +507,9 @@ body[data-world="afterlife"] .timeline-item.is-clickable.is-active {
   border-radius: 8px;
   background: var(--surface);
   cursor: grab;
-  touch-action: none;
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
 .map-viewport.is-panning {
@@ -713,6 +715,198 @@ body[data-world="afterlife"] .map-menu-item:hover {
   margin: 0.15rem 0 0;
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+.map-viewport.can-pan {
+  touch-action: none;
+}
+
+.add-form .field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.links-filter {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.links-list {
+  max-height: 12rem;
+  margin: 0;
+  padding: 0.3rem;
+  overflow: auto;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.add-form .links-list label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.3rem;
+  color: var(--ink);
+}
+
+.links-hint {
+  padding: 0.3rem;
+  color: var(--muted);
+}
+
+.images-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.images-strip:empty {
+  display: none;
+}
+
+.images-item {
+  position: relative;
+}
+
+.images-item img {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.images-item button {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  line-height: 1;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 48rem) {
+  .gallery {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.gallery-item {
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  text-align: left;
+}
+
+.gallery-item img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.gallery-item span {
+  display: block;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+.gallery-item.is-active {
+  outline: 2px solid var(--accent);
+}
+
+.related {
+  margin-top: 1.25rem;
+}
+
+.related h3 {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.related-images {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+
+.related-images img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.related-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.related-links button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+}
+
+.related-kind {
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+
+.details-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.details-actions button {
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.details-actions .danger {
+  border-color: #b13322;
+  color: #b13322;
 }
 
 /* ---------- Универсальная форма добавления ---------- */

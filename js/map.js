@@ -1,4 +1,3 @@
-// js/map.js
 import { h, applyColor } from './util.js';
 import { openForm } from './addEntry.js';
 import { supabase } from './supabase.js';
@@ -6,7 +5,8 @@ import { supabase } from './supabase.js';
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 4;
 const ZOOM_STEP = 1.2;
-const DRAG_THRESHOLD = 5;
+const DRAG_THRESHOLD = 8;
+const LONG_PRESS_MS = 600;
 
 function renderDot(settlement) {
   const dot = h('span', { class: 'dot' }, String(settlement.number ?? ''));
@@ -14,14 +14,11 @@ function renderDot(settlement) {
   return dot;
 }
 
-/**
- * Создаёт интерактивный вьюер карты.
- * @param {Array} settlements
- * @param {{ mapImage: string, mapAlt: string }} settings
- * @param {{ onSelect: (entry: any, trigger: HTMLElement) => void }} callbacks
- */
+function distance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
 export function createMapView(settlements, settings, callbacks) {
-  /* ---------- DOM ---------- */
   const stage = h('div', { class: 'map-stage' });
   const img = h('img', {
     class: 'map-image',
@@ -30,6 +27,22 @@ export function createMapView(settlements, settings, callbacks) {
     draggable: 'false',
   });
   stage.append(img);
+
+  const state = {
+    scale: 1,
+    tx: 0,
+    ty: 0,
+    isDragging: false,
+    moved: false,
+    gesture: null,
+    pointers: new Map(),
+    startX: 0,
+    startY: 0,
+    startTx: 0,
+    startTy: 0,
+    pinchDist: 0,
+    pressTimer: null,
+  };
 
   const markers = settlements.map((s) => {
     const marker = h(
@@ -65,7 +78,6 @@ export function createMapView(settlements, settings, callbacks) {
   );
   viewport.append(zoomControls);
 
-  /* ---------- Легенда ---------- */
   const legend = h(
     'ul',
     { class: 'map-legend' },
@@ -88,22 +100,12 @@ export function createMapView(settlements, settings, callbacks) {
     )
   );
 
-  /* ---------- Состояние transform ---------- */
-  const state = {
-    scale: 1,
-    tx: 0,
-    ty: 0,
-    isDown: false,
-    isDragging: false,
-    moved: false,
-    startX: 0,
-    startY: 0,
-    startTx: 0,
-    startTy: 0,
-  };
-
   function applyTransform() {
     stage.style.transform = `translate(${state.tx}px, ${state.ty}px) scale(${state.scale})`;
+    const canPan =
+      stage.offsetWidth * state.scale > viewport.clientWidth + 1 ||
+      stage.offsetHeight * state.scale > viewport.clientHeight + 1;
+    viewport.classList.toggle('can-pan', canPan);
   }
 
   function clampPan() {
@@ -112,26 +114,13 @@ export function createMapView(settlements, settings, callbacks) {
     const sw = stage.offsetWidth * state.scale;
     const sh = stage.offsetHeight * state.scale;
 
-    // По горизонтали
-    if (sw <= vw) {
-      state.tx = (vw - sw) / 2;
-    } else {
-      state.tx = Math.min(0, Math.max(vw - sw, state.tx));
-    }
-
-    // По вертикали
-    if (sh <= vh) {
-      state.ty = (vh - sh) / 2;
-    } else {
-      state.ty = Math.min(0, Math.max(vh - sh, state.ty));
-    }
+    state.tx = sw <= vw ? (vw - sw) / 2 : Math.min(0, Math.max(vw - sw, state.tx));
+    state.ty = sh <= vh ? (vh - sh) / 2 : Math.min(0, Math.max(vh - sh, state.ty));
   }
 
   function zoomBy(factor, originX, originY) {
-    const vw = viewport.clientWidth;
-    const vh = viewport.clientHeight;
-    const ox = originX ?? vw / 2;
-    const oy = originY ?? vh / 2;
+    const ox = originX ?? viewport.clientWidth / 2;
+    const oy = originY ?? viewport.clientHeight / 2;
 
     const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, state.scale * factor));
     const ratio = newScale / state.scale;
@@ -152,61 +141,17 @@ export function createMapView(settlements, settings, callbacks) {
     applyTransform();
   }
 
-  /* ---------- Zoom колесом ---------- */
   viewport.addEventListener(
     'wheel',
     (event) => {
       event.preventDefault();
       const rect = viewport.getBoundingClientRect();
-      const ox = event.clientX - rect.left;
-      const oy = event.clientY - rect.top;
       const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
-      zoomBy(factor, ox, oy);
+      zoomBy(factor, event.clientX - rect.left, event.clientY - rect.top);
     },
     { passive: false }
   );
 
-  /* ---------- Drag (pan) ---------- */
-  viewport.addEventListener('mousedown', (event) => {
-    if (event.button !== 0) return; // только ЛКМ
-    state.isDown = true;
-    state.isDragging = false;
-    state.moved = false;
-    state.startX = event.clientX;
-    state.startY = event.clientY;
-    state.startTx = state.tx;
-    state.startTy = state.ty;
-  });
-
-  window.addEventListener('mousemove', (event) => {
-    if (!state.isDown) return;
-    const dx = event.clientX - state.startX;
-    const dy = event.clientY - state.startY;
-
-    if (!state.isDragging && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
-      state.isDragging = true;
-      state.moved = true;
-      viewport.classList.add('is-panning');
-    }
-
-    if (state.isDragging) {
-      state.tx = state.startTx + dx;
-      state.ty = state.startTy + dy;
-      clampPan();
-      applyTransform();
-    }
-  });
-
-  window.addEventListener('mouseup', () => {
-    if (!state.isDown) return;
-    state.isDown = false;
-    state.isDragging = false;
-    viewport.classList.remove('is-panning');
-    // Сбрасываем «moved» чуть позже, чтобы клик по маркеру не сработал после drag
-    setTimeout(() => { state.moved = false; }, 0);
-  });
-
-  /* ---------- ПКМ: контекстное меню ---------- */
   const menu = h(
     'div',
     { class: 'map-menu', hidden: true },
@@ -218,42 +163,136 @@ export function createMapView(settlements, settings, callbacks) {
     menu.hidden = true;
   }
 
-  viewport.addEventListener('contextmenu', async (event) => {
-    event.preventDefault();
-
-    // Проверим, вошла ли пользовательница — иначе меню не показываем
+  async function openMenuAt(clientX, clientY) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Координаты клика в системе stage (без transform)
     const rect = viewport.getBoundingClientRect();
-    const localX = (event.clientX - rect.left - state.tx) / state.scale;
-    const localY = (event.clientY - rect.top - state.ty) / state.scale;
+    const localX = (clientX - rect.left - state.tx) / state.scale;
+    const localY = (clientY - rect.top - state.ty) / state.scale;
+    const percentX = Math.max(0, Math.min(100, (localX / stage.offsetWidth) * 100));
+    const percentY = Math.max(0, Math.min(100, (localY / stage.offsetHeight) * 100));
 
-    // Переводим в проценты от размеров картинки
-    const stageW = stage.offsetWidth;
-    const stageH = stage.offsetHeight;
-    const percentX = Math.max(0, Math.min(100, (localX / stageW) * 100));
-    const percentY = Math.max(0, Math.min(100, (localY / stageH) * 100));
-
-    menu.style.left = `${event.clientX}px`;
-    menu.style.top = `${event.clientY}px`;
+    menu.style.left = `${Math.min(clientX, window.innerWidth - 200)}px`;
+    menu.style.top = `${Math.min(clientY, window.innerHeight - 60)}px`;
     menu.hidden = false;
 
-    // Обработчик кнопки — одноразовый
-    const btn = menu.querySelector('.map-menu-item');
-    const handler = () => {
+    const oldButton = menu.querySelector('.map-menu-item');
+    const newButton = oldButton.cloneNode(true);
+    newButton.addEventListener('click', () => {
       closeMenu();
       openForm('settlements', {
         x: Number(percentX.toFixed(2)),
         y: Number(percentY.toFixed(2)),
       });
-    };
-    btn.replaceWith(btn.cloneNode(true));
-    menu.querySelector('.map-menu-item').addEventListener('click', handler);
+    });
+    oldButton.replaceWith(newButton);
+  }
+
+  function clearPress() {
+    clearTimeout(state.pressTimer);
+    state.pressTimer = null;
+  }
+
+  function beginGesture() {
+    const points = [...state.pointers.values()];
+    if (points.length === 1) {
+      state.gesture = 'pan';
+      state.startX = points[0].x;
+      state.startY = points[0].y;
+      state.startTx = state.tx;
+      state.startTy = state.ty;
+    } else if (points.length >= 2) {
+      state.gesture = 'pinch';
+      state.pinchDist = distance(points[0], points[1]);
+      clearPress();
+    }
+  }
+
+  viewport.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (event.target.closest('.map-zoom')) return;
+
+    state.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    state.moved = false;
+    state.isDragging = false;
+    beginGesture();
+
+    if (event.pointerType === 'touch' && state.pointers.size === 1) {
+      const { clientX, clientY } = event;
+      clearPress();
+      state.pressTimer = setTimeout(() => {
+        state.pressTimer = null;
+        if (state.isDragging || state.pointers.size !== 1) return;
+        state.moved = true;
+        openMenuAt(clientX, clientY);
+      }, LONG_PRESS_MS);
+    }
   });
 
-  document.addEventListener('mousedown', (event) => {
+  window.addEventListener('pointermove', (event) => {
+    if (!state.pointers.has(event.pointerId)) return;
+    state.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const points = [...state.pointers.values()];
+
+    if (state.gesture === 'pinch' && points.length >= 2) {
+      const dist = distance(points[0], points[1]);
+      if (state.pinchDist > 0) {
+        const rect = viewport.getBoundingClientRect();
+        const cx = (points[0].x + points[1].x) / 2 - rect.left;
+        const cy = (points[0].y + points[1].y) / 2 - rect.top;
+        zoomBy(dist / state.pinchDist, cx, cy);
+      }
+      state.pinchDist = dist;
+      state.moved = true;
+      return;
+    }
+
+    if (state.gesture !== 'pan') return;
+
+    const dx = points[0].x - state.startX;
+    const dy = points[0].y - state.startY;
+
+    if (!state.isDragging && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+      state.isDragging = true;
+      state.moved = true;
+      clearPress();
+      viewport.classList.add('is-panning');
+    }
+
+    if (state.isDragging) {
+      state.tx = state.startTx + dx;
+      state.ty = state.startTy + dy;
+      clampPan();
+      applyTransform();
+    }
+  });
+
+  function endPointer(event) {
+    if (!state.pointers.delete(event.pointerId)) return;
+    clearPress();
+
+    if (state.pointers.size === 0) {
+      state.gesture = null;
+      state.isDragging = false;
+      viewport.classList.remove('is-panning');
+      setTimeout(() => {
+        state.moved = false;
+      }, 0);
+    } else {
+      beginGesture();
+    }
+  }
+
+  window.addEventListener('pointerup', endPointer);
+  window.addEventListener('pointercancel', endPointer);
+
+  viewport.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    openMenuAt(event.clientX, event.clientY);
+  });
+
+  document.addEventListener('pointerdown', (event) => {
     if (menu.hidden) return;
     if (!menu.contains(event.target)) closeMenu();
   });
@@ -262,7 +301,6 @@ export function createMapView(settlements, settings, callbacks) {
     if (event.key === 'Escape') closeMenu();
   });
 
-  // Первичная центровка
   requestAnimationFrame(() => {
     clampPan();
     applyTransform();
