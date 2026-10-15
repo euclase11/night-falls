@@ -124,7 +124,6 @@ export function renderEntries(items, emptyText, onSelect) {
   );
 }
 
-
 /* ---------- Универсальный бланк записи ---------- */
 
 function icon(name) {
@@ -144,6 +143,8 @@ function iconButton(name, label, onClick, extraClass = '') {
     icon(name)
   );
 }
+
+/* ---------- Лайтбокс со свайпом ---------- */
 
 function openLightbox(urls, startIndex = 0) {
   let index = startIndex;
@@ -178,6 +179,97 @@ function openLightbox(urls, startIndex = 0) {
     overlay.remove();
   }
 
+  /* ---------- Свайп на тач-устройствах ---------- */
+
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTime = 0;
+  let tracking = false;
+
+  const SWIPE_MIN = 50;      // минимум по горизонтали для переключения
+  const CLOSE_MIN = 80;      // минимум по вертикали для закрытия
+  const MAX_OFFSET = 120;    // максимум сдвига картинки при перетаскивании
+
+  overlay.addEventListener(
+    'touchstart',
+    (event) => {
+      if (event.touches.length !== 1) return;
+      const t = event.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      touchStartTime = Date.now();
+      tracking = true;
+      img.style.transition = 'none';
+    },
+    { passive: true }
+  );
+
+  overlay.addEventListener(
+    'touchmove',
+    (event) => {
+      if (!tracking) return;
+      if (event.touches.length !== 1) {
+        tracking = false;
+        return;
+      }
+      const t = event.touches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+
+      // Если жест больше по вертикали — ведём вниз (к закрытию)
+      if (Math.abs(dy) > Math.abs(dx)) {
+        const offset = Math.max(0, Math.min(dy, MAX_OFFSET));
+        img.style.transform = `translateY(${offset}px)`;
+        overlay.style.opacity = String(1 - offset / (MAX_OFFSET * 2));
+      } else {
+        // Горизонтальный жест — сдвигаем картинку вбок
+        const offset = Math.max(-MAX_OFFSET, Math.min(dx, MAX_OFFSET));
+        img.style.transform = `translateX(${offset}px)`;
+      }
+    },
+    { passive: true }
+  );
+
+  overlay.addEventListener(
+    'touchend',
+    (event) => {
+      if (!tracking) return;
+      tracking = false;
+
+      const t = event.changedTouches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+      const dt = Date.now() - touchStartTime;
+      const velocity = Math.abs(dx) / Math.max(dt, 1); // px/ms
+
+      img.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+      img.style.transform = '';
+      overlay.style.opacity = '';
+
+      // Свайп вниз → закрыть
+      if (dy > CLOSE_MIN && Math.abs(dy) > Math.abs(dx)) {
+        close();
+        return;
+      }
+
+      // Горизонтальный свайп → переключить
+      if (Math.abs(dx) > SWIPE_MIN && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) show(index + 1);
+        else show(index - 1);
+        return;
+      }
+
+      // Быстрый флик (короткий, но резкий свайп)
+      if (velocity > 0.5 && Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) show(index + 1);
+        else show(index - 1);
+      }
+    },
+    { passive: true }
+  );
+
+  /* ---------- Клик по фону и клавиатура ---------- */
+
   overlay.addEventListener('click', (event) => {
     if (event.target === overlay) close();
   });
@@ -186,6 +278,8 @@ function openLightbox(urls, startIndex = 0) {
   show(index);
   closeBtn.focus();
 }
+
+/* ---------- Related images ---------- */
 
 function renderRelatedImages(urls, gallery, offset) {
   if (!urls || !urls.length) return null;
@@ -206,6 +300,8 @@ function renderRelatedImages(urls, gallery, offset) {
     )
   );
 }
+
+/* ---------- Связанные записи ---------- */
 
 function renderRefList(title, load, onOpen) {
   const list = h('ul', { class: 'related-links' });
@@ -235,6 +331,8 @@ function renderRefList(title, load, onOpen) {
 
   return box;
 }
+
+/* ---------- Универсальный бланк записи ---------- */
 
 export function renderEntryDetails(entry, { canEdit = false, onOpen, onBack, onEdit, onDelete } = {}) {
   const related = entry.images ?? [];
@@ -269,6 +367,8 @@ export function renderEntryDetails(entry, { canEdit = false, onOpen, onBack, onE
       : null
   );
 }
+
+/* ---------- Галерея ---------- */
 
 export function renderGallery(items, emptyText, onSelect) {
   if (!items.length) return renderEmpty(emptyText);

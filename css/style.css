@@ -1284,3 +1284,13 @@ body[data-world="afterlife"] #entry-form-message.is-success {
   vertical-align: -0.05em;
   font-size: 1.1em;
 }
+
+.lightbox-image {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  will-change: transform;
+  touch-action: none;
+}
+
+.lightbox {
+  transition: opacity 0.25s ease;
+}
