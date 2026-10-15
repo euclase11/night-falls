@@ -124,14 +124,28 @@ export const store = {
   },
 
   async all() {
-    const lists = await Promise.all([
+    const results = await Promise.allSettled([
       this.characters(),
       this.settlements(),
       this.events(),
       this.other(),
       this.gallery(),
     ]);
-    return lists.flat();
+    return results.flatMap((result) => {
+      if (result.status === 'fulfilled') return result.value;
+      console.error(result.reason);
+      return [];
+    });
+  },
+
+  async backlinks(entry) {
+    const key = `${entry.table}:${entry.id}`;
+    const own = new Set(entry.links ?? []);
+    const all = await this.all();
+    return all.filter((item) => {
+      const itemKey = `${item.table}:${item.id}`;
+      return itemKey !== key && !own.has(itemKey) && item.links.includes(key);
+    });
   },
 
   async resolve(keys) {

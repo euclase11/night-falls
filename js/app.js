@@ -40,6 +40,7 @@ const state = {
 let renderToken = 0;
 let controlsToken = 0;
 let sheetTrigger = null;
+const sheetHistory = [];
 let renderSkeletonTimer = null;
 
 function tabFromHash() {
@@ -159,12 +160,15 @@ function markActive(id) {
   });
 }
 
-function selectEntry(entry, trigger) {
-  sheetTrigger = trigger;
+function showEntry(entry) {
   els.sheetBody.replaceChildren(
     renderEntryDetails(entry, {
       canEdit: document.body.dataset.auth === 'in',
-      onOpen: (next) => selectEntry(next, sheetTrigger),
+      onOpen: (next) => {
+        sheetHistory.push(entry);
+        showEntry(next);
+      },
+      onBack: sheetHistory.length ? () => showEntry(sheetHistory.pop()) : null,
       onEdit: () => {
         closeSheet(false);
         editEntry(entry);
@@ -175,13 +179,21 @@ function selectEntry(entry, trigger) {
     })
   );
   els.sheet.hidden = false;
+  els.sheet.scrollTop = 0;
   markActive(entry.id);
+}
+
+function selectEntry(entry, trigger) {
+  sheetTrigger = trigger;
+  sheetHistory.length = 0;
+  showEntry(entry);
   els.sheetClose.focus();
 }
 
 function closeSheet(restoreFocus = true) {
   if (els.sheet.hidden) return;
   els.sheet.hidden = true;
+  sheetHistory.length = 0;
   markActive(null);
   if (restoreFocus && sheetTrigger && sheetTrigger.isConnected) sheetTrigger.focus();
   sheetTrigger = null;

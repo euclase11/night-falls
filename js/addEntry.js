@@ -2,6 +2,7 @@ import { supabase } from './supabase.js';
 import { FORMS } from './forms.js';
 import { store, REF_LABELS } from './store.js';
 import { h } from './util.js';
+import { deleteFiles, imageUrlsOf } from './upload.js';
 
 const section = document.getElementById('entry-form-section');
 const formEl = document.getElementById('entry-form');
@@ -36,10 +37,17 @@ function renderLinksField(field, prefill) {
   const selected = new Set(Array.isArray(prefill[field.name]) ? prefill[field.name] : []);
   const self = editing ? `${editing.table}:${editing.id}` : null;
 
+  const summary = h('summary', {});
   const filter = h('input', { type: 'search', class: 'links-filter', placeholder: 'Найти запись' });
   const list = h('ul', { class: 'links-list' }, h('li', { class: 'links-hint' }, 'Загрузка...'));
-  const group = h('div', { class: 'field-group', id: `field-${field.name}` }, h('span', {}, field.label), filter, list);
+  const details = h('details', { class: 'links-picker' }, summary, filter, list);
+  const group = h('div', { class: 'field-group', id: `field-${field.name}` }, h('span', {}, field.label), details);
 
+  function updateSummary() {
+    summary.textContent = selected.size ? `Выбрано: ${selected.size}` : 'Выбрать записи';
+  }
+
+  updateSummary();
   group.getValue = () => [...selected];
 
   filter.addEventListener('keydown', (event) => {
@@ -61,6 +69,7 @@ function renderLinksField(field, prefill) {
       for (const key of [...selected]) {
         if (!existing.has(key)) selected.delete(key);
       }
+      updateSummary();
 
       if (!options.length) {
         list.replaceChildren(h('li', { class: 'links-hint' }, 'Пока нет записей для связи'));
@@ -73,6 +82,7 @@ function renderLinksField(field, prefill) {
         checkbox.addEventListener('change', () => {
           if (checkbox.checked) selected.add(option.key);
           else selected.delete(option.key);
+          updateSummary();
         });
         const row = h('li', {}, h('label', {}, checkbox, option.label));
         row.dataset.text = option.label.toLowerCase().replaceAll('ё', 'е');
@@ -246,6 +256,19 @@ export function editEntry(entry) {
   openForm(entry.table, {}, entry);
 }
 
+async function removeReferences(entry) {
+  const key = `${entry.table}:${entry.id}`;
+  const all = await store.all();
+  const referrers = all.filter((item) => item.links.includes(key));
+  await Promise.all(
+    referrers.map(async (item) => {
+      const links = item.links.filter((value) => value !== key);
+      const { error } = await supabase.from(item.table).update({ links }).eq('id', item.id);
+      if (error) console.error(error);
+    })
+  );
+}
+
 export async function deleteEntry(entry) {
   if (!window.confirm(`Удалить «${entry.name}»?`)) return false;
 
@@ -258,6 +281,11 @@ export async function deleteEntry(entry) {
     window.alert('Не удалось удалить: нет прав или запись уже удалена.');
     return false;
   }
+
+  await Promise.all([
+    deleteFiles(imageUrlsOf(entry.raw)).catch(console.error),
+    removeReferences(entry).catch(console.error),
+  ]);
 
   document.dispatchEvent(new CustomEvent('data:updated', { detail: { table: entry.table } }));
   return true;
@@ -313,14 +341,21 @@ formEl?.addEventListener('submit', async (e) => {
   submitBtn.disabled = true;
   submitBtn.textContent = 'Сохраняем...';
 
-  try {
-    const row = await config.toRow(values, editing?.raw);
+    try {
+    const previous = editing?.raw;
+    const row = await config.toRow(values, previous);
     const query = editing
       ? supabase.from(config.table).update(row).eq('id', editing.id)
       : supabase.from(config.table).insert(row);
     const { data, error } = await query.select();
     if (error) throw error;
     if (!data || !data.length) throw new Error('Нет прав на сохранение');
+
+    if (previous) {
+      const kept = new Set(imageUrlsOf(row));
+      const removed = imageUrlsOf(previous).filter((url) => !kept.has(url));
+      await deleteFiles(removed).catch(console.error);
+    }
 
     showMessage('Сохранено!', 'is-success');
 

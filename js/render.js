@@ -127,7 +127,49 @@ export function renderEntries(items, emptyText, onSelect) {
 
 /* ---------- Универсальный бланк записи ---------- */
 
-function renderRelatedImages(urls) {
+function openLightbox(urls, startIndex = 0) {
+  let index = startIndex;
+  const img = h('img', { class: 'lightbox-image', alt: '' });
+  const counter = h('span', { class: 'lightbox-counter' });
+  const prev = h('button', { type: 'button', class: 'lightbox-nav lightbox-prev', 'aria-label': 'Предыдущее', onClick: () => show(index - 1) }, '‹');
+  const next = h('button', { type: 'button', class: 'lightbox-nav lightbox-next', 'aria-label': 'Следующее', onClick: () => show(index + 1) }, '›');
+  const closeBtn = h('button', { type: 'button', class: 'lightbox-close', 'aria-label': 'Закрыть', onClick: close }, '×');
+  const overlay = h('div', { class: 'lightbox', role: 'dialog', 'aria-modal': 'true' }, closeBtn, prev, img, next, counter);
+
+  function show(i) {
+    index = (i + urls.length) % urls.length;
+    img.src = urls[index];
+    counter.textContent = urls.length > 1 ? `${index + 1} / ${urls.length}` : '';
+    prev.hidden = urls.length < 2;
+    next.hidden = urls.length < 2;
+  }
+
+  function onKey(event) {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      close();
+    } else if (event.key === 'ArrowLeft' && urls.length > 1) {
+      show(index - 1);
+    } else if (event.key === 'ArrowRight' && urls.length > 1) {
+      show(index + 1);
+    }
+  }
+
+  function close() {
+    document.removeEventListener('keydown', onKey, true);
+    overlay.remove();
+  }
+
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) close();
+  });
+  document.addEventListener('keydown', onKey, true);
+  document.body.append(overlay);
+  show(index);
+  closeBtn.focus();
+}
+
+function renderRelatedImages(urls, gallery, offset) {
   if (!urls || !urls.length) return null;
   return h(
     'div',
@@ -136,21 +178,23 @@ function renderRelatedImages(urls) {
     h(
       'div',
       { class: 'related-images' },
-      urls.map((url) =>
-        h('a', { href: url, target: '_blank', rel: 'noopener' }, h('img', { src: url, alt: '', loading: 'lazy' }))
+      urls.map((url, i) =>
+        h(
+          'button',
+          { type: 'button', class: 'related-image', 'aria-label': 'Открыть изображение', onClick: () => openLightbox(gallery, offset + i) },
+          h('img', { src: url, alt: '', loading: 'lazy' })
+        )
       )
     )
   );
 }
 
-function renderRelatedLinks(keys, onOpen) {
-  if (!keys || !keys.length) return null;
+function renderRefList(title, load, onOpen) {
   const list = h('ul', { class: 'related-links' });
-  const box = h('div', { class: 'related' }, h('h3', {}, 'Связано'), list);
+  const box = h('div', { class: 'related' }, h('h3', {}, title), list);
   box.hidden = true;
 
-  store
-    .resolve(keys)
+  load()
     .then((items) => {
       if (!items.length) return;
       list.replaceChildren(
@@ -174,19 +218,29 @@ function renderRelatedLinks(keys, onOpen) {
   return box;
 }
 
-export function renderEntryDetails(entry, { canEdit = false, onOpen, onEdit, onDelete } = {}) {
+export function renderEntryDetails(entry, { canEdit = false, onOpen, onBack, onEdit, onDelete } = {}) {
+  const related = entry.images ?? [];
+  const gallery = [entry.imageUrl, ...related].filter(Boolean);
+  const offset = entry.imageUrl ? 1 : 0;
+
   return h(
     'div',
     { class: 'entry-details' },
+    onBack ? h('button', { type: 'button', class: 'details-back', onClick: onBack }, '← Назад') : null,
     entry.imageUrl
-      ? h('img', { class: 'details-image', src: entry.imageUrl, alt: entry.name })
+      ? h(
+          'button',
+          { type: 'button', class: 'details-image-button', 'aria-label': 'Открыть изображение', onClick: () => openLightbox(gallery, 0) },
+          h('img', { class: 'details-image', src: entry.imageUrl, alt: entry.name })
+        )
       : null,
     h('h2', {}, entry.name),
     entry.kind ? h('p', { class: 'details-kind' }, entry.kind) : null,
     entry.meta ? h('p', { class: 'details-meta' }, entry.meta) : null,
     h('p', {}, entry.description),
-    renderRelatedImages(entry.images),
-    renderRelatedLinks(entry.links, onOpen),
+    renderRelatedImages(related, gallery, offset),
+    entry.links && entry.links.length ? renderRefList('Связано', () => store.resolve(entry.links), onOpen) : null,
+    renderRefList('Упоминается в', () => store.backlinks(entry), onOpen),
     canEdit
       ? h(
           'div',

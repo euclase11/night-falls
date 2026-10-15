@@ -1134,3 +1134,135 @@ body[data-world="afterlife"] #entry-form-message.is-success {
     animation: none;
   }
 }
+
+.add-form .links-picker {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.add-form .links-picker summary {
+  padding: 0.5rem 0.7rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.add-form .links-picker[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.add-form .links-picker .links-filter {
+  width: calc(100% - 1rem);
+  margin: 0.5rem;
+}
+
+.add-form .links-list {
+  max-height: 10rem;
+  margin: 0;
+  padding: 0 0.5rem 0.5rem;
+  overflow-y: auto;
+  border: 0;
+  list-style: none;
+}
+
+.add-form .links-list label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  color: var(--ink);
+}
+
+.details-back {
+  margin: 0 0 0.75rem;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.details-image-button,
+.related-image {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.details-image-button {
+  width: 100%;
+}
+
+.related-image img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.related-links button:hover {
+  border-color: var(--accent);
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.88);
+}
+
+.lightbox-image {
+  max-width: 92vw;
+  max-height: 86vh;
+  object-fit: contain;
+}
+
+.lightbox-close,
+.lightbox-nav {
+  position: absolute;
+  border: 0;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  line-height: 1;
+}
+
+.lightbox-close {
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  font-size: 1.6rem;
+}
+
+.lightbox-nav {
+  top: 50%;
+  width: 2.5rem;
+  height: 3.5rem;
+  border-radius: 8px;
+  font-size: 2rem;
+  transform: translateY(-50%);
+}
+
+.lightbox-prev {
+  left: 0.5rem;
+}
+
+.lightbox-next {
+  right: 0.5rem;
+}
+
+.lightbox-counter {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 50%;
+  color: #ffffff;
+  font-size: 0.9rem;
+  transform: translateX(-50%);
+}

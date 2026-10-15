@@ -26,3 +26,28 @@ export async function uploadFile(folder, file) {
   const { data } = supabase.storage.from('images').getPublicUrl(path);
   return data.publicUrl;
 }
+
+const PUBLIC_MARKER = '/storage/v1/object/public/images/';
+
+export function imageUrlsOf(row) {
+  const urls = [];
+  if (row?.image_url) urls.push(row.image_url);
+  if (Array.isArray(row?.images)) urls.push(...row.images);
+  return urls;
+}
+
+function pathFromUrl(url) {
+  const index = url.indexOf(PUBLIC_MARKER);
+  if (index === -1) return null;
+  return decodeURIComponent(url.slice(index + PUBLIC_MARKER.length).split('?')[0]);
+}
+
+export async function deleteFiles(urls) {
+  const paths = urls.map(pathFromUrl).filter(Boolean);
+  if (!paths.length) return;
+  const { data, error } = await supabase.storage.from('images').remove(paths);
+  if (error) throw error;
+  if (!data || data.length < paths.length) {
+    console.warn('Не все файлы удалены из хранилища: проверьте политику delete для бакета images');
+  }
+}
