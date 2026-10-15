@@ -1,6 +1,6 @@
 {
   "name": "наступает ночь",
-  "short_name": "наступает ночь",
+  "short_name": "ночь",
   "description": "Сайт для ролевой игры 'наступает ночь'",
   "start_url": "/night-falls/",
   "scope": "/night-falls/",
