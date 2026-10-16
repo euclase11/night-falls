@@ -510,3 +510,11 @@ body[data-auth="in"] main {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+body[data-world="real"] .atm-train {
+  animation-play-state: paused;
+}
+
+body[data-world="afterlife"] .atm-furnace::after {
+  animation-play-state: paused;
+}

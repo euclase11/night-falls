@@ -6,8 +6,8 @@
   "scope": "/night-falls/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ececea",
-  "theme_color": "#d97a2b",
+  "background_color": "#151617",
+  "theme_color": "#151617",
   "lang": "ru",
   "icons": [
     {
