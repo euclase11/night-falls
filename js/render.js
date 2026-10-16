@@ -81,7 +81,7 @@ export function renderCollapsible(content, rows = 2) {
     update(true);
   });
 
-  new ResizeObserver(measure).observe(wrap);
+  new ResizeObserver(() => requestAnimationFrame(measure)).observe(wrap);
   return wrap;
 }
 
@@ -98,11 +98,11 @@ export function renderTimeline(events, emptyText, onSelect) {
         'li',
         {
           class: 'timeline-item' + (onSelect ? ' is-clickable' : ''),
-          dataset: event.id ? { entry: String(event.id) } : {},
+          dataset: event.id ? { entry: `${event.table}:${event.id}` } : {},
           tabindex: onSelect ? '0' : null,
           role: onSelect ? 'button' : null,
         },
-        h('span', { class: 'timeline-date' }, event.date),
+        event.date ? h('span', { class: 'timeline-date' }, event.date) : null,
         h('h3', {}, event.title),
         h('p', {}, event.description)
       );
@@ -135,7 +135,7 @@ export function renderEntries(items, emptyText, onSelect) {
         'li',
         {
           class: 'entry' + (onSelect ? ' is-clickable' : '') + (item.imageUrl ? ' has-thumb' : ''),
-          dataset: item.id ? { entry: String(item.id) } : {},
+          dataset: item.id ? { entry: `${item.table}:${item.id}` } : {},
           tabindex: onSelect ? '0' : null,
           role: onSelect ? 'button' : null,
         },
@@ -424,7 +424,7 @@ export function renderGallery(items, emptyText, onSelect) {
         {
           type: 'button',
           class: 'gallery-item',
-          dataset: item.id ? { entry: String(item.id) } : {},
+          dataset: item.id ? { entry: `${item.table}:${item.id}` } : {},
           onClick: () => onSelect(item, button),
         },
         h('img', { src: item.imageUrl, alt: item.name, loading: 'lazy' }),

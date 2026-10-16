@@ -150,13 +150,14 @@ async function renderControls() {
 
 /* ---------- Боковая карточка (sheet) ---------- */
 
-function markActive(id) {
-  const idStr = id == null ? null : String(id);
+function markActive(entry) {
+  const key = entry ? `${entry.table}:${entry.id}` : null;
+  const id = entry ? String(entry.id) : null;
   els.view.querySelectorAll('[data-settlement], [data-entry]').forEach((node) => {
     const isActive =
-      (node.dataset.settlement && node.dataset.settlement === idStr) ||
-      (node.dataset.entry && node.dataset.entry === idStr);
-    node.classList.toggle('is-active', isActive);
+      (node.dataset.settlement && entry?.table === 'settlements' && node.dataset.settlement === id) ||
+      (node.dataset.entry && node.dataset.entry === key);
+    node.classList.toggle('is-active', Boolean(isActive));
   });
 }
 
@@ -180,7 +181,7 @@ function showEntry(entry) {
   );
   els.sheet.hidden = false;
   els.sheet.scrollTop = 0;
-  markActive(entry.id);
+  markActive(entry);
 }
 
 function selectEntry(entry, trigger) {
@@ -249,6 +250,16 @@ document.addEventListener('data:updated', (event) => {
   const table = event.detail?.table;
   invalidateCache(table);
   closeSheet(false);
+  renderControls();
+  renderResults();
+});
+
+let lastSync = Date.now();
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || Date.now() - lastSync < 120000) return;
+  lastSync = Date.now();
+  invalidateCache();
   renderControls();
   renderResults();
 });

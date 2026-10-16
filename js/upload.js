@@ -47,7 +47,7 @@ export async function uploadFile(folder, file) {
     .from('images')
     .upload(path, buffer, {
       contentType: type,
-      cacheControl: '3600',
+      cacheControl: '31536000',
       upsert: false,
     });
 

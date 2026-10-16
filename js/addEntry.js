@@ -330,7 +330,7 @@ export async function deleteEntry(entry) {
     removeReferences(entry).catch(console.error),
   ]);
 
-  document.dispatchEvent(new CustomEvent('data:updated', { detail: { table: entry.table } }));
+  document.dispatchEvent(new CustomEvent('data:updated'));
   return true;
 }
 
@@ -404,7 +404,7 @@ formEl?.addEventListener('submit', async (e) => {
 
     setTimeout(() => {
       closeForm();
-      document.dispatchEvent(new CustomEvent('data:updated', { detail: { table: config.table } }));
+      document.dispatchEvent(new CustomEvent('data:updated'));
     }, 800);
   } catch (err) {
     console.error(err);
