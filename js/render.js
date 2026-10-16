@@ -43,6 +43,48 @@ export function renderSegmented({ options, current, label, className, onPick }) 
   return group;
 }
 
+export function renderCollapsible(content, rows = 2) {
+  let expanded = false;
+  let checked = false;
+  const toggle = h('button', { type: 'button', class: 'chips-toggle' });
+  const wrap = h('div', { class: 'chips-wrap' }, content, toggle);
+
+  function update(overflow) {
+    wrap.classList.toggle('is-collapsed', overflow && !expanded);
+    toggle.hidden = !overflow;
+    toggle.textContent = expanded ? 'Свернуть' : 'Показать все';
+    toggle.setAttribute('aria-expanded', String(expanded));
+  }
+
+  function measure() {
+    const first = content.querySelector('button');
+    if (!first || !first.offsetHeight) return;
+    const gap = parseFloat(getComputedStyle(content).rowGap) || 0;
+    const max = first.offsetHeight * rows + gap * (rows - 1);
+    content.style.setProperty('--chips-max', `${max}px`);
+    const overflow = content.scrollHeight > max + 1;
+
+    if (!checked) {
+      checked = true;
+      const active = content.querySelector('[aria-pressed="true"]');
+      if (active) {
+        const top = active.getBoundingClientRect().top - content.getBoundingClientRect().top;
+        if (top >= max) expanded = true;
+      }
+    }
+
+    update(overflow);
+  }
+
+  toggle.addEventListener('click', () => {
+    expanded = !expanded;
+    update(true);
+  });
+
+  new ResizeObserver(measure).observe(wrap);
+  return wrap;
+}
+
 /* ---------- Таймлайн (кликабельные элементы) ---------- */
 
 export function renderTimeline(events, emptyText, onSelect) {

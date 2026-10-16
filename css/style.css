@@ -1304,3 +1304,25 @@ body[data-world="afterlife"] #entry-form-message.is-success {
   text-overflow: ellipsis;
   margin: 0.4rem 0 0;
 }
+
+@media (max-width: 40rem) {
+  .title {
+    order: 1;
+  }
+
+  #logout-btn {
+    order: 2;
+    margin-left: auto;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  #world-switch {
+    order: 3;
+  }
+
+  #auth-container {
+    order: 4;
+    width: 100%;
+  }
+}

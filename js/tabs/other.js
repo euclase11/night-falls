@@ -1,7 +1,7 @@
 // js/tabs/other.js
 import { store } from '../store.js';
-import { renderEntries, renderSegmented } from '../render.js';
 import { matchesQuery } from '../util.js';
+import { renderEntries, renderSegmented, renderCollapsible } from '../render.js';
 
 export const otherTab = {
   id: 'other',
@@ -31,13 +31,15 @@ export const otherTab = {
     const items = await this.loadAll();
     const kinds = [...new Set(items.filter((i) => i.world === state.world).map((i) => i.kind))];
     if (kinds.length === 0) return null;
-    return renderSegmented({
-      options: [['all', 'Все'], ...kinds.map((k) => [k, k])],
-      current: state.kind,
-      label: 'Тип записи',
-      className: 'chips',
-      onPick: (value) => ctx.onKindChange(value),
-    });
+    return renderCollapsible(
+      renderSegmented({
+        options: [['all', 'Все'], ...kinds.map((k) => [k, k])],
+        current: state.kind,
+        label: 'Тип записи',
+        className: 'chips',
+        onPick: (value) => ctx.onKindChange(value),
+      })
+    );
   },
 
   render(items, emptyText, ctx) {

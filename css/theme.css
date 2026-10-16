@@ -502,3 +502,19 @@ body[data-auth="in"] main {
     padding-bottom: 9rem;
   }
 }
+
+.chips-wrap.is-collapsed .chips {
+  max-height: var(--chips-max, 4.5rem);
+  overflow: hidden;
+}
+
+.chips-toggle {
+  margin-top: 0.4rem;
+  padding: 0.2rem 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
