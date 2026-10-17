@@ -87,39 +87,221 @@ export function renderCollapsible(content, rows = 2) {
 
 /* ---------- Таймлайн (кликабельные элементы) ---------- */
 
-export function renderTimeline(events, emptyText, onSelect) {
+let reordering = false;
+let suppressClickUntil = 0;
+
+document.addEventListener(
+  'touchmove',
+  (event) => {
+    if (reordering) event.preventDefault();
+  },
+  { passive: false }
+);
+
+const LONG_PRESS_MS = 450;
+const MOVE_CANCEL = 10;
+const EDGE_ZONE = 70;
+
+function enableReorder(list, item, eventByNode, onReorder) {
+  let timer = null;
+  let dragging = false;
+  let pressX = 0;
+  let pressY = 0;
+  let dragStartY = 0;
+  let startScroll = 0;
+  let lastY = 0;
+  let nodes = [];
+  let rects = [];
+  let fromIndex = 0;
+  let dragHeight = 0;
+  let currentTarget = 0;
+  let scrollFrame = 0;
+
+  function targetIndex() {
+    const pointer = lastY + window.scrollY;
+    let target = 0;
+    rects.forEach((rect, index) => {
+      if (index !== fromIndex && rect.mid < pointer) target += 1;
+    });
+    return target;
+  }
+
+  function applyShifts(target) {
+    nodes.forEach((node, index) => {
+      if (index === fromIndex) return;
+      const position = index < fromIndex ? index : index - 1;
+      let shift = 0;
+      if (index < fromIndex && position >= target) shift = dragHeight;
+      else if (index > fromIndex && position < target) shift = -dragHeight;
+      node.style.transform = shift ? `translateY(${shift}px)` : '';
+    });
+  }
+
+  function follow() {
+    const delta = lastY + window.scrollY - (dragStartY + startScroll);
+    item.style.transform = `translateY(${delta}px)`;
+    currentTarget = targetIndex();
+    applyShifts(currentTarget);
+  }
+
+  function autoScroll() {
+    if (!dragging) return;
+    const bottom = window.innerHeight - lastY;
+    let delta = 0;
+    if (lastY < EDGE_ZONE) delta = -Math.ceil((EDGE_ZONE - lastY) / 6);
+    else if (bottom < EDGE_ZONE) delta = Math.ceil((EDGE_ZONE - bottom) / 6);
+    if (delta) {
+      window.scrollBy(0, delta);
+      follow();
+    }
+    scrollFrame = requestAnimationFrame(autoScroll);
+  }
+
+  function startDrag() {
+    dragging = true;
+    reordering = true;
+    nodes = [...list.children];
+    fromIndex = nodes.indexOf(item);
+    rects = nodes.map((node) => {
+      const rect = node.getBoundingClientRect();
+      return { mid: rect.top + window.scrollY + rect.height / 2 };
+    });
+    dragHeight = item.getBoundingClientRect().height;
+    dragStartY = lastY;
+    startScroll = window.scrollY;
+    currentTarget = fromIndex;
+    item.classList.add('is-dragging');
+    list.classList.add('is-reordering');
+    document.body.classList.add('is-dragging-timeline');
+    if (navigator.vibrate) navigator.vibrate(15);
+    scrollFrame = requestAnimationFrame(autoScroll);
+  }
+
+  function stopPress() {
+    clearTimeout(timer);
+    timer = null;
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onEnd);
+    window.removeEventListener('pointercancel', onCancel);
+  }
+
+  function finish(commit) {
+    const wasDragging = dragging;
+    stopPress();
+    if (!wasDragging) return;
+
+    dragging = false;
+    reordering = false;
+    cancelAnimationFrame(scrollFrame);
+    suppressClickUntil = Date.now() + 400;
+
+    nodes.forEach((node) => {
+      node.style.transition = 'none';
+      node.style.transform = '';
+    });
+    item.classList.remove('is-dragging');
+    list.classList.remove('is-reordering');
+    document.body.classList.remove('is-dragging-timeline');
+
+    if (commit && currentTarget !== fromIndex) {
+      const others = nodes.filter((node) => node !== item);
+      const prev = currentTarget > 0 ? eventByNode.get(others[currentTarget - 1]) : null;
+      const next = others[currentTarget] ? eventByNode.get(others[currentTarget]) : null;
+      list.insertBefore(item, others[currentTarget] ?? null);
+
+      let order;
+      if (prev && next) order = (prev.order + next.order) / 2;
+      else if (next) order = next.order - 1;
+      else order = prev.order + 1;
+
+      onReorder(eventByNode.get(item), order);
+    }
+
+    requestAnimationFrame(() => {
+      nodes.forEach((node) => {
+        node.style.transition = '';
+      });
+    });
+  }
+
+  function onMove(event) {
+    lastY = event.clientY;
+    if (!dragging) {
+      if (Math.hypot(event.clientX - pressX, event.clientY - pressY) > MOVE_CANCEL) stopPress();
+      return;
+    }
+    follow();
+  }
+
+  function onEnd() {
+    finish(true);
+  }
+
+  function onCancel() {
+    finish(false);
+  }
+
+  item.addEventListener('pointerdown', (event) => {
+    if (document.body.dataset.auth !== 'in') return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    pressX = event.clientX;
+    pressY = event.clientY;
+    lastY = event.clientY;
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onEnd);
+    window.addEventListener('pointercancel', onCancel);
+    timer = setTimeout(() => {
+      timer = null;
+      startDrag();
+    }, LONG_PRESS_MS);
+  });
+
+  item.addEventListener('contextmenu', (event) => {
+    if (timer || dragging) event.preventDefault();
+  });
+}
+
+export function renderTimeline(events, emptyText, onSelect, onReorder) {
   if (!events.length) return renderEmpty(emptyText);
 
-  return h(
-    'ol',
-    { class: 'timeline' },
-    events.map((event) => {
-      const item = h(
-        'li',
-        {
-          class: 'timeline-item' + (onSelect ? ' is-clickable' : ''),
-          dataset: event.id ? { entry: `${event.table}:${event.id}` } : {},
-          tabindex: onSelect ? '0' : null,
-          role: onSelect ? 'button' : null,
-        },
-        event.date ? h('span', { class: 'timeline-date' }, event.date) : null,
-        h('h3', {}, event.title),
-        h('p', {}, event.description)
-      );
+  const eventByNode = new Map();
+  const list = h('ol', { class: 'timeline' });
 
-      if (onSelect) {
-        item.addEventListener('click', () => onSelect(event, item));
-        item.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onSelect(event, item);
-          }
-        });
-      }
+  events.forEach((event) => {
+    const item = h(
+      'li',
+      {
+        class: 'timeline-item' + (onSelect ? ' is-clickable' : ''),
+        dataset: event.id ? { entry: `${event.table}:${event.id}` } : {},
+        tabindex: onSelect ? '0' : null,
+        role: onSelect ? 'button' : null,
+      },
+      event.date ? h('span', { class: 'timeline-date' }, event.date) : null,
+      h('h3', {}, event.title),
+      h('p', {}, event.description)
+    );
 
-      return item;
-    })
-  );
+    eventByNode.set(item, event);
+
+    if (onSelect) {
+      item.addEventListener('click', () => {
+        if (Date.now() < suppressClickUntil) return;
+        onSelect(event, item);
+      });
+      item.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(event, item);
+        }
+      });
+    }
+
+    if (onReorder) enableReorder(list, item, eventByNode, onReorder);
+
+    list.append(item);
+  });
+
+  return list;
 }
 
 /* ---------- Список карточек (кликабельные) ---------- */

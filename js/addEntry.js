@@ -334,6 +334,20 @@ export async function deleteEntry(entry) {
   return true;
 }
 
+export async function moveEvent(entry, order) {
+  const { data, error } = await supabase
+    .from('events')
+    .update({ sort_order: order })
+    .eq('id', entry.id)
+    .select();
+
+  if (error || !data || !data.length) {
+    window.alert('Не удалось переместить: ' + (error?.message || 'нет прав'));
+  }
+
+  document.dispatchEvent(new CustomEvent('data:updated', { detail: { table: 'events' } }));
+}
+
 function closeForm() {
   section.hidden = true;
   formEl.reset();

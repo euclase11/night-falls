@@ -3,8 +3,8 @@ import { config } from './config.js';
 import { h } from './util.js';
 import { renderEntryDetails, renderSkeleton } from './render.js';
 import { TABS } from './tabs/index.js';
-import { store, invalidateCache } from './store.js';   
-import { editEntry, deleteEntry } from './addEntry.js';
+import { store, invalidateCache } from './store.js';
+import { editEntry, deleteEntry, moveEvent } from './addEntry.js';
 
 const DEFAULT_TAB = 'timeline';
 
@@ -68,6 +68,7 @@ const ctx = {
   onSelectEntry(entry, trigger) {
     selectEntry(entry, trigger);
   },
+  onReorder: moveEvent,
 };
 
 /* ---------- Chrome ---------- */
@@ -164,7 +165,7 @@ function markActive(entry) {
 function showEntry(entry) {
   els.sheetBody.replaceChildren(
     renderEntryDetails(entry, {
-      canEdit: document.body.dataset.auth === 'in',
+      canEdit: document.body.dataset.auth === 'in' && !entry.derived,
       onOpen: (next) => {
         sheetHistory.push(entry);
         showEntry(next);

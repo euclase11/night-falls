@@ -31,6 +31,6 @@ export const timelineTab = {
   },
 
   render(items, emptyText, ctx) {
-    return renderTimeline(items, emptyText, ctx.onSelectEntry);
+    return renderTimeline(items, emptyText, ctx.onSelectEntry, ctx.onReorder);
   },
 };

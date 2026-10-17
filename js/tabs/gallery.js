@@ -9,7 +9,7 @@ export const galleryTab = {
   placeholder: 'Поиск по галерее',
 
   async load(state) {
-    const items = await store.gallery();
+    const items = await store.galleryFeed();
     return items
       .filter((i) => i.world === state.world)
       .filter((i) => matchesQuery(i, state.query, ['name', 'description']))

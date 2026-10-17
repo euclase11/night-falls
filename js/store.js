@@ -41,6 +41,13 @@ function extras(row) {
   };
 }
 
+const TYPE_LABELS = {
+  characters: 'персонаж',
+  settlements: 'поселение',
+  events: 'событие',
+  misc: 'другое',
+};
+
 export const store = {
   async characters() {
     if (cache.characters) return cache.characters;
@@ -121,6 +128,39 @@ export const store = {
       ...extras(g),
     }));
     return cache.gallery;
+  },
+
+  async galleryFeed() {
+    const [own, all] = await Promise.all([this.gallery(), this.all()]);
+    const seen = new Set(own.map((item) => item.imageUrl));
+    const derived = [];
+
+    for (const entry of all) {
+      if (entry.table === 'gallery') continue;
+      const urls = [entry.imageUrl, ...entry.images].filter(Boolean);
+      urls.forEach((url, index) => {
+        if (seen.has(url)) return;
+        seen.add(url);
+        derived.push({
+          id: `${entry.table}-${entry.id}-${index}`,
+          table: 'gallery',
+          derived: true,
+          world: entry.world,
+          name: `из записи ${entry.name} - ${TYPE_LABELS[entry.table]}`,
+          description: '',
+          kind: 'Галерея',
+          meta: null,
+          tags: [],
+          imageUrl: url,
+          createdAt: entry.raw?.created_at ?? '',
+          links: [`${entry.table}:${entry.id}`],
+          images: [],
+          raw: null,
+        });
+      });
+    }
+
+    return [...own, ...derived];
   },
 
   async all() {
