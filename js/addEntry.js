@@ -21,6 +21,11 @@ const TAB_FORMS = {
   gallery: 'gallery',
 };
 
+const WORLD_LABELS = {
+  real: 'реальный мир',
+  afterlife: 'посмертие',
+};
+
 let isLoggedIn = false;
 let activeKey = null;
 let editing = null;
@@ -36,15 +41,30 @@ function currentTabId() {
 function renderLinksField(field, prefill) {
   const selected = new Set(Array.isArray(prefill[field.name]) ? prefill[field.name] : []);
   const self = editing ? `${editing.table}:${editing.id}` : null;
+  const currentWorld = document.body.dataset.world === 'afterlife' ? 'afterlife' : 'real';
 
   const summary = h('summary', {});
   const filter = h('input', { type: 'search', class: 'links-filter', placeholder: 'Найти запись' });
+  const otherWorld = h('input', { type: 'checkbox' });
+  const otherWorldLabel = h('label', { class: 'links-toggle' }, otherWorld, 'Показывать записи из другого мира');
   const list = h('ul', { class: 'links-list' }, h('li', { class: 'links-hint' }, 'Загрузка...'));
-  const details = h('details', { class: 'links-picker' }, summary, filter, list);
+  const details = h('details', { class: 'links-picker' }, summary, filter, otherWorldLabel, list);
   const group = h('div', { class: 'field-group', id: `field-${field.name}` }, h('span', {}, field.label), details);
+
+  let rows = [];
 
   function updateSummary() {
     summary.textContent = selected.size ? `Выбрано: ${selected.size}` : 'Выбрать записи';
+  }
+
+  function applyFilters() {
+    const needle = filter.value.toLowerCase().replaceAll('ё', 'е').trim();
+    const showOther = otherWorld.checked;
+    rows.forEach((item) => {
+      const worldOk = showOther || !item.world || item.world === currentWorld || selected.has(item.key);
+      const textOk = needle === '' || item.text.includes(needle);
+      item.node.hidden = !(worldOk && textOk);
+    });
   }
 
   updateSummary();
@@ -53,17 +73,25 @@ function renderLinksField(field, prefill) {
   filter.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') event.preventDefault();
   });
+  filter.addEventListener('input', applyFilters);
+  otherWorld.addEventListener('change', applyFilters);
 
   store
     .all()
     .then((items) => {
       const options = items
         .filter((entry) => `${entry.table}:${entry.id}` !== self)
-        .map((entry) => ({
-          key: `${entry.table}:${entry.id}`,
-          label: `${REF_LABELS[entry.table]}: ${entry.name}`,
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label, 'ru'));
+        .map((entry) => {
+          const base = `${REF_LABELS[entry.table]}: ${entry.name}`;
+          const foreign = entry.world && entry.world !== currentWorld;
+          return {
+            key: `${entry.table}:${entry.id}`,
+            world: entry.world,
+            base,
+            label: foreign ? `${base} (${WORLD_LABELS[entry.world] ?? entry.world})` : base,
+          };
+        })
+        .sort((a, b) => a.base.localeCompare(b.base, 'ru'));
 
       const existing = new Set(options.map((option) => option.key));
       for (const key of [...selected]) {
@@ -76,7 +104,7 @@ function renderLinksField(field, prefill) {
         return;
       }
 
-      const rows = options.map((option) => {
+      rows = options.map((option) => {
         const checkbox = h('input', { type: 'checkbox' });
         checkbox.checked = selected.has(option.key);
         checkbox.addEventListener('change', () => {
@@ -84,18 +112,17 @@ function renderLinksField(field, prefill) {
           else selected.delete(option.key);
           updateSummary();
         });
-        const row = h('li', {}, h('label', {}, checkbox, option.label));
-        row.dataset.text = option.label.toLowerCase().replaceAll('ё', 'е');
-        return row;
+        const node = h('li', {}, h('label', {}, checkbox, option.label));
+        return {
+          node,
+          key: option.key,
+          world: option.world,
+          text: option.base.toLowerCase().replaceAll('ё', 'е'),
+        };
       });
-      list.replaceChildren(...rows);
 
-      filter.addEventListener('input', () => {
-        const needle = filter.value.toLowerCase().replaceAll('ё', 'е').trim();
-        rows.forEach((row) => {
-          row.hidden = needle !== '' && !row.dataset.text.includes(needle);
-        });
-      });
+      list.replaceChildren(...rows.map((item) => item.node));
+      applyFilters();
     })
     .catch((error) => {
       console.error(error);

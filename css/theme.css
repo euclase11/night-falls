@@ -568,3 +568,79 @@ body.is-dragging-timeline {
     -webkit-user-select: none;
     user-select: none;
 }
+
+.add-form .links-picker .links-toggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0.5rem 0.5rem;
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+
+.add-form input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-grid;
+  flex: none;
+  place-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--bg);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.add-form input[type="checkbox"]::before {
+  content: "";
+  width: 0.65rem;
+  height: 0.65rem;
+  background: var(--accent-ink);
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  transform: scale(0);
+  transition: transform 0.12s ease;
+}
+
+.add-form input[type="checkbox"]:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.add-form input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+body[data-world="afterlife"] .add-form input[type="checkbox"] {
+  border-radius: 50%;
+}
+
+.add-form input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.add-form input[type="file"]::file-selector-button:hover {
+  border-color: var(--accent);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 55%, transparent) transparent;
+}
+
+html:has(body[data-world="real"]) {
+  scrollbar-color: #4a4447 #151415;
+}
+
+html:has(body[data-world="afterlife"]) {
+  scrollbar-color: #bfa6b2 #e6dadd;
+}
