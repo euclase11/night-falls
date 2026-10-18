@@ -135,9 +135,34 @@ function renderLinksField(field, prefill) {
 function renderPositionField(field) {
   const select = h('select', {});
   const wrapper = h('label', { id: `field-${field.name}` }, field.label, select);
+  let worldSelect = null;
+  let scopeSelect = null;
+  let events = [];
 
   function add(value, text) {
     select.append(h('option', { value }, text));
+  }
+
+  function fill() {
+    const world = worldSelect ? worldSelect.value : null;
+    const scope = scopeSelect ? scopeSelect.value : null;
+    const previous = select.value;
+    const unchanged = editing && editing.raw.world === world && editing.raw.scope === scope;
+
+    const sorted = events
+      .filter((e) => e.id !== editing?.id)
+      .filter((e) => (!world || e.world === world) && (!scope || e.scope === scope))
+      .sort((a, b) => a.order - b.order);
+
+    select.replaceChildren();
+    if (unchanged) add('keep', 'Оставить на месте');
+    add('start', 'В самое начало');
+    for (const e of sorted) add(`after:${e.id}`, `После: ${e.name}${e.date ? ` (${e.date})` : ''}`);
+    add('end', 'В самый конец');
+
+    const values = [...select.options].map((option) => option.value);
+    if (values.includes(previous)) select.value = previous;
+    else select.value = unchanged ? 'keep' : 'end';
   }
 
   add(editing ? 'keep' : 'end', editing ? 'Оставить на месте' : 'В самый конец');
@@ -148,18 +173,19 @@ function renderPositionField(field) {
     return { mode: value };
   };
 
+  wrapper.bind = (world, scope) => {
+    worldSelect = world;
+    scopeSelect = scope;
+    world?.addEventListener('change', fill);
+    scope?.addEventListener('change', fill);
+    fill();
+  };
+
   store
     .events()
-    .then((events) => {
-      const self = editing?.id;
-      const sorted = events.filter((e) => e.id !== self).sort((a, b) => a.order - b.order);
-
-      select.replaceChildren();
-      if (editing) add('keep', 'Оставить на месте');
-      add('start', 'В самое начало');
-      for (const e of sorted) add(`after:${e.id}`, `После: ${e.name}${e.date ? ` (${e.date})` : ''}`);
-      add('end', 'В самый конец');
-      select.value = editing ? 'keep' : 'end';
+    .then((list) => {
+      events = list;
+      fill();
     })
     .catch(console.error);
 
@@ -273,6 +299,11 @@ function renderField(field, prefill = {}) {
 function renderForm(config, prefill = {}) {
   titleEl.textContent = editing ? 'Редактирование' : config.title;
   fieldsEl.replaceChildren(...config.fields.map((field) => renderField(field, prefill)));
+
+  const position = fieldsEl.querySelector('#field-position');
+  if (position && position.bind) {
+    position.bind(fieldsEl.querySelector('#field-world'), fieldsEl.querySelector('#field-scope'));
+  }
 }
 
 function collectValues(config) {
