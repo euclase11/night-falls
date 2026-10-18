@@ -883,6 +883,14 @@ body[data-world="afterlife"] .map-menu-item:hover {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: transparent;
+  white-space: nowrap;       /* ← не ломать текст внутри кнопки */
+  max-width: 100%;           /* ← не вылезать за пределы контейнера */
+  overflow: hidden;          /* ← если совсем длинно — обрезать */
+  text-overflow: ellipsis;   /* ← … в конце */
+}
+
+.related-links button > span {
+  flex-shrink: 0;            /* ← метка типа ("Событие:") не сжимается */
 }
 
 .related-kind {
