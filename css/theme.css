@@ -644,3 +644,91 @@ html:has(body[data-world="real"]) {
 html:has(body[data-world="afterlife"]) {
   scrollbar-color: #bfa6b2 #e6dadd;
 }
+
+.sheet-resizer {
+  display: none;
+}
+
+@media (min-width: 48rem) {
+  .sheet {
+    width: var(--sheet-width, min(36rem, 60vw));
+    max-width: 90vw;
+  }
+
+  .sheet-resizer {
+    display: block;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: calc(var(--sheet-width, min(36rem, 60vw)) - 4px);
+    z-index: 31;
+    width: 8px;
+    cursor: ew-resize;
+    touch-action: none;
+    transition: background-color 0.15s ease;
+  }
+
+  .sheet-resizer:hover,
+  .sheet-resizer.is-active {
+    background: color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+
+body.is-resizing {
+  cursor: ew-resize;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.related-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.4rem;
+}
+
+.related-links li {
+  min-width: 0;
+}
+
+.related-links button {
+  width: 100%;
+  justify-content: flex-start;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.related-images {
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+}
+
+#entry-form-title {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+}
+
+@media (min-width: 48rem) {
+  #entry-form-section {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    max-width: none;
+    margin: 0;
+    padding: 1.5rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  body[data-world="afterlife"] #entry-form-section {
+    background: rgba(58, 22, 38, 0.4);
+  }
+
+  #entry-form-section .add-form {
+    width: min(100%, 36rem);
+    max-width: none;
+    margin: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+}

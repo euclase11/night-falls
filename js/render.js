@@ -1,6 +1,6 @@
 // js/render.js
 import { h, readableText } from './util.js';
-import { store, REF_LABELS } from './store.js';
+import { store, refLabel } from './store.js';
 
 function applyColor(node, color) {
   if (!color) return;
@@ -543,7 +543,7 @@ function renderRefList(title, load, onOpen) {
             h(
               'button',
               { type: 'button', onClick: () => onOpen?.(item) },
-              h('span', { class: 'related-kind' }, REF_LABELS[item.table]),
+              h('span', { class: 'related-kind' }, refLabel(item)),
               item.name
             )
           )

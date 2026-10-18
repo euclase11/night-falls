@@ -29,6 +29,55 @@ function writeSetting(key, value) {
   try { localStorage.setItem(key, value); } catch { /* ignore */ }
 }
 
+const sheetResizer = h('div', {
+  class: 'sheet-resizer',
+  role: 'separator',
+  'aria-orientation': 'vertical',
+  'aria-label': 'Изменить ширину карточки',
+  title: 'Потяните, чтобы изменить ширину (двойной клик — сбросить)',
+  hidden: true,
+});
+document.body.append(sheetResizer);
+
+let sheetWidth = Number(readSetting('sheetWidth')) || 0;
+
+function applySheetWidth(px) {
+  const max = Math.round(window.innerWidth * 0.7);
+  sheetWidth = Math.min(max, Math.max(320, Math.round(px)));
+  document.documentElement.style.setProperty('--sheet-width', `${sheetWidth}px`);
+}
+
+if (sheetWidth) applySheetWidth(sheetWidth);
+
+sheetResizer.addEventListener('pointerdown', (event) => {
+  event.preventDefault();
+  sheetResizer.setPointerCapture(event.pointerId);
+  sheetResizer.classList.add('is-active');
+  document.body.classList.add('is-resizing');
+});
+
+sheetResizer.addEventListener('pointermove', (event) => {
+  if (!sheetResizer.hasPointerCapture(event.pointerId)) return;
+  applySheetWidth(window.innerWidth - event.clientX);
+});
+
+function stopResize(event) {
+  if (!sheetResizer.hasPointerCapture(event.pointerId)) return;
+  sheetResizer.releasePointerCapture(event.pointerId);
+  sheetResizer.classList.remove('is-active');
+  document.body.classList.remove('is-resizing');
+  writeSetting('sheetWidth', String(sheetWidth));
+}
+
+sheetResizer.addEventListener('pointerup', stopResize);
+sheetResizer.addEventListener('pointercancel', stopResize);
+
+sheetResizer.addEventListener('dblclick', () => {
+  sheetWidth = 0;
+  document.documentElement.style.removeProperty('--sheet-width');
+  writeSetting('sheetWidth', '');
+});
+
 const state = {
   tab: DEFAULT_TAB,
   world: readSetting('world') === 'afterlife' ? 'afterlife' : 'real',
@@ -181,6 +230,7 @@ function showEntry(entry) {
     })
   );
   els.sheet.hidden = false;
+  sheetResizer.hidden = false;
   els.sheet.scrollTop = 0;
   markActive(entry);
 }
@@ -195,6 +245,7 @@ function selectEntry(entry, trigger) {
 function closeSheet(restoreFocus = true) {
   if (els.sheet.hidden) return;
   els.sheet.hidden = true;
+  sheetResizer.hidden = true;
   sheetHistory.length = 0;
   markActive(null);
   if (restoreFocus && sheetTrigger && sheetTrigger.isConnected) sheetTrigger.focus();

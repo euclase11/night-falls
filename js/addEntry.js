@@ -1,6 +1,6 @@
 import { supabase } from './supabase.js';
 import { FORMS } from './forms.js';
-import { store, REF_LABELS } from './store.js';
+import { store, refLabel } from './store.js';
 import { h } from './util.js';
 import { deleteFiles, imageUrlsOf } from './upload.js';
 
@@ -29,6 +29,7 @@ const WORLD_LABELS = {
 let isLoggedIn = false;
 let activeKey = null;
 let editing = null;
+let dirty = false;
 
 function formKeyForTab(tabId) {
   return TAB_FORMS[tabId] ?? null;
@@ -82,7 +83,7 @@ function renderLinksField(field, prefill) {
       const options = items
         .filter((entry) => `${entry.table}:${entry.id}` !== self)
         .map((entry) => {
-          const base = `${REF_LABELS[entry.table]}: ${entry.name}`;
+          const base = `${refLabel(entry)}: ${entry.name}`;
           const foreign = entry.world && entry.world !== currentWorld;
           return {
             key: `${entry.table}:${entry.id}`,
@@ -213,6 +214,7 @@ function renderImagesField(field, prefill) {
               onClick: () => {
                 keep.delete(url);
                 draw();
+                group.dispatchEvent(new Event('change', { bubbles: true }));
               },
             },
             h('span', { class: 'icon icon-close', 'aria-hidden': 'true' })
@@ -345,6 +347,7 @@ export function openForm(key, prefill = {}, entry = null) {
   }
 
   renderForm(config, prefill);
+  dirty = false;
   section.hidden = false;
   openBtn.hidden = true;
   clearMessage();
@@ -407,6 +410,7 @@ export async function moveEvent(entry, order) {
 }
 
 function closeForm() {
+  dirty = false;
   section.hidden = true;
   formEl.reset();
   clearMessage();
@@ -443,6 +447,44 @@ openBtn?.addEventListener('click', () => {
   if (key) openForm(key);
 });
 cancelBtn?.addEventListener('click', closeForm);
+
+const desktopQuery = window.matchMedia('(min-width: 48rem)');
+let pressedOnOverlay = false;
+
+function markDirty(event) {
+  if (event.target.closest('.links-filter, .links-toggle')) return;
+  dirty = true;
+}
+
+formEl.addEventListener('input', markDirty);
+formEl.addEventListener('change', markDirty);
+
+function requestClose() {
+  if (submitBtn.disabled) return;
+  if (dirty && !window.confirm('Закрыть без сохранения? Введённые данные пропадут.')) return;
+  closeForm();
+}
+
+cancelBtn?.addEventListener('click', requestClose);
+
+section.addEventListener('pointerdown', (event) => {
+  pressedOnOverlay = event.target === section;
+});
+
+section.addEventListener('click', (event) => {
+  if (desktopQuery.matches && pressedOnOverlay && event.target === section) requestClose();
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !section.hidden) requestClose();
+});
+
+window.addEventListener('beforeunload', (event) => {
+  if (!dirty || section.hidden) return;
+  event.preventDefault();
+  // eslint-disable-next-line deprecation/deprecation
+  event.returnValue = '';
+});
 
 formEl?.addEventListener('submit', async (e) => {
   e.preventDefault();

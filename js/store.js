@@ -8,6 +8,11 @@ export const REF_LABELS = {
   gallery: 'Галерея',
 };
 
+export function refLabel(entry) {
+  if (entry.table === 'misc' && entry.kind) return entry.kind;
+  return REF_LABELS[entry.table];
+}
+
 const cache = {
   characters: null,
   settlements: null,
