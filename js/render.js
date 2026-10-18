@@ -278,7 +278,7 @@ export function renderTimeline(events, emptyText, onSelect, onReorder) {
       },
       event.date ? h('span', { class: 'timeline-date' }, event.date) : null,
       h('h3', {}, event.title),
-      h('p', {}, event.description)
+      h('p', { class: 'entry-desc' }, event.description)
     );
 
     eventByNode.set(item, event);
