@@ -681,20 +681,26 @@ body.is-resizing {
 }
 
 .related-links {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
 }
 
 .related-links li {
   min-width: 0;
+  max-width: 100%;
 }
 
 .related-links button {
-  width: 100%;
+  max-width: 100%;
   justify-content: flex-start;
   border-radius: 12px;
   text-align: left;
+}
+
+.related-links .related-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .related-images {

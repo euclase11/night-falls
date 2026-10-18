@@ -697,10 +697,10 @@ body[data-world="afterlife"] .map-menu-item:hover {
 
 .entry-details .details-image {
   display: block;
-  width: 100%;
-  height: auto;           /* ← вместо max-height */
-  max-height: 24rem;      /* ограничение по высоте, но без обрезки */
-  object-fit: contain;    /* ← вместо cover — сохраняет пропорции */
+  max-width: 100%;
+  max-height: 24rem;
+  width: auto;
+  height: auto;
   border-radius: 8px;
   margin: 0 0 1rem;
   border: 1px solid var(--line);
@@ -877,42 +877,30 @@ body[data-world="afterlife"] .map-menu-item:hover {
 }
 
 .related-links li {
-  max-width: 100%;   /* li не вылезает за контейнер */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .related-links button {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.4rem;
   padding: 0.3rem 0.7rem;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: transparent;
-  white-space: nowrap;
   max-width: 100%;
-}
-
-.related-links button.is-wrap {
-  white-space: normal;
-  word-break: break-word;
+  min-width: 0;
   text-align: left;
-  border-radius: 12px;   /* скруглённые углы для многострочной кнопки */
 }
 
 .related-links button > .related-kind {
   flex-shrink: 0;
 }
 
-/* Когда кнопка упирается в max-width — разрешаем перенос внутри */
-.related-links button:where(:has(> .related-name)) {
-  /* fallback: если браузер не поддерживает :has — правило не сработает */
-}
-
-@media (max-width: 40rem) {
-  .related-links button {
-    white-space: normal;    /* на мобильных переносим всегда */
-    word-break: break-word;
-  }
+.related-links .related-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .related-kind {
@@ -1222,7 +1210,9 @@ body[data-world="afterlife"] #entry-form-message.is-success {
 }
 
 .details-image-button {
-  width: 100%;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
 }
 
 .related-image img {
