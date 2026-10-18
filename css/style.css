@@ -698,8 +698,9 @@ body[data-world="afterlife"] .map-menu-item:hover {
 .entry-details .details-image {
   display: block;
   width: 100%;
-  max-height: 20rem;
-  object-fit: cover;
+  height: auto;           /* ← вместо max-height */
+  max-height: 24rem;      /* ограничение по высоте, но без обрезки */
+  object-fit: contain;    /* ← вместо cover — сохраняет пропорции */
   border-radius: 8px;
   margin: 0 0 1rem;
   border: 1px solid var(--line);
@@ -875,6 +876,10 @@ body[data-world="afterlife"] .map-menu-item:hover {
   list-style: none;
 }
 
+.related-links li {
+  max-width: 100%;   /* li не вылезает за контейнер */
+}
+
 .related-links button {
   display: inline-flex;
   align-items: center;
@@ -883,14 +888,31 @@ body[data-world="afterlife"] .map-menu-item:hover {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: transparent;
-  white-space: nowrap;       /* ← не ломать текст внутри кнопки */
-  max-width: 100%;           /* ← не вылезать за пределы контейнера */
-  overflow: hidden;          /* ← если совсем длинно — обрезать */
-  text-overflow: ellipsis;   /* ← … в конце */
+  white-space: nowrap;
+  max-width: 100%;
 }
 
-.related-links button > span {
-  flex-shrink: 0;            /* ← метка типа ("Событие:") не сжимается */
+.related-links button.is-wrap {
+  white-space: normal;
+  word-break: break-word;
+  text-align: left;
+  border-radius: 12px;   /* скруглённые углы для многострочной кнопки */
+}
+
+.related-links button > .related-kind {
+  flex-shrink: 0;
+}
+
+/* Когда кнопка упирается в max-width — разрешаем перенос внутри */
+.related-links button:where(:has(> .related-name)) {
+  /* fallback: если браузер не поддерживает :has — правило не сработает */
+}
+
+@media (max-width: 40rem) {
+  .related-links button {
+    white-space: normal;    /* на мобильных переносим всегда */
+    word-break: break-word;
+  }
 }
 
 .related-kind {

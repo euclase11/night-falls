@@ -549,6 +549,29 @@ function renderRefList(title, load, onOpen) {
           )
         )
       );
+      // После вставки кнопок — проверить, какие не помещаются
+      requestAnimationFrame(() => {
+        const containerWidth = list.clientWidth;
+        list.querySelectorAll('button').forEach((btn) => {
+          // Сбросить класс, чтобы измерить natural width
+          btn.classList.remove('is-wrap');
+          if (btn.scrollWidth > containerWidth) {
+            btn.classList.add('is-wrap');
+          }
+        });
+      });
+      // В renderRefList, после requestAnimationFrame:
+      const observer = new ResizeObserver(() => {
+        const containerWidth = list.clientWidth;
+        list.querySelectorAll('button').forEach((btn) => {
+          btn.classList.remove('is-wrap');
+          if (btn.scrollWidth > containerWidth) {
+            btn.classList.add('is-wrap');
+          }
+        });
+      });
+      observer.observe(list);
+      // отключить при удалении из DOM — сложно, но для бланка живёт недолго
       box.hidden = false;
     })
     .catch(console.error);
