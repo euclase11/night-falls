@@ -6,7 +6,6 @@ function svgEl(name, attrs = {}) {
   return node;
 }
 
-// Реальный мир: шестигранная гайка — чистый industrial/mechancore
 function realIcon() {
   return [
     svgEl('path', {
@@ -17,13 +16,12 @@ function realIcon() {
   ];
 }
 
-// Посмертие: невысокий дом с двускатной крышей и трубой — ренессанс
 function afterlifeIcon() {
   return [
-    svgEl('path', { d: 'M3 11 L12 4 L21 11', fill: 'none' }),
-    svgEl('path', { d: 'M5 10 L5 20 L19 20 L19 10', fill: 'none' }),
-    svgEl('rect', { x: 10, y: 14, width: 4, height: 6, fill: 'none' }),
-    svgEl('path', { d: 'M16 9 L16 5 L18 5 L18 9', fill: 'none' }),
+    svgEl('rect', { x: 4, y: 5, width: 16, height: 12, rx: 2, fill: 'none' }),
+    svgEl('path', { d: 'M4 9 L20 9', fill: 'none' }),
+    svgEl('circle', { cx: 8, cy: 19, r: 1.6, fill: 'none' }),
+    svgEl('circle', { cx: 16, cy: 19, r: 1.6, fill: 'none' }),
   ];
 }
 

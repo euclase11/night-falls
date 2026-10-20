@@ -1302,8 +1302,8 @@ body[data-world="real"] {
 }
 
 body[data-world="afterlife"] {
-  --fav-mid:  #d9dcc9;   
-  --fav-glow: rgba(232, 235, 220, 0.9);
+  --fav-mid:  #e5d9c2;   
+  --fav-glow: rgba(240, 230, 200, 0.85);
   --fav-wash: rgba(217, 220, 201, 0.28);
 }
 
