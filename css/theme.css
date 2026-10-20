@@ -1190,6 +1190,7 @@ body[data-world="afterlife"] {
     --fav-wash: rgba(255, 226, 170, 0.35);
 }
 
+
 .fav-icon {
   display: block;
   width: 1.1rem;
@@ -1201,31 +1202,52 @@ body[data-world="afterlife"] {
   stroke-linejoin: round;
 }
 
+.fav-icon .fav-ring {
+  stroke: var(--fav-ring, currentColor);
+}
+.fav-icon .fav-dot {
+  fill: var(--fav-dot, currentColor);
+  stroke: none;
+}
+
+
+body[data-world="real"] {
+  --fav-mid:  #a03e2d;                     
+  --fav-glow: rgba(160, 49, 45, 0.6);
+  --fav-wash: rgba(160, 82, 45, 0.09);
+}
+
+body[data-world="afterlife"] {
+  --fav-ring: #794d60;                     
+  --fav-dot:  #fff3d0;                     
+  --fav-glow: rgba(255, 232, 184, 1);     
+  --fav-wash: rgba(140, 47, 79, 0.06);
+}
+
 .fav-btn .fav-icon {
-  stroke: var(--muted);
-  transition: stroke 0.2s ease, filter 0.3s ease, opacity 0.3s ease;
+  transition: opacity 0.25s ease;
 }
-
-.fav-btn:hover .fav-icon {
-  stroke: var(--accent-text, var(--accent));
-}
-
-.fav-btn[aria-pressed="true"] .fav-icon {
-  stroke: var(--fav-mid);
-  filter: drop-shadow(0 0 4px var(--fav-glow))
-          drop-shadow(0 0 8px var(--fav-glow));
+.fav-btn .fav-dot {
+  opacity: 0.5;                            
+  transition: opacity 0.3s ease, filter 0.3s ease;
 }
 
 body[data-world="real"] .fav-btn[aria-pressed="true"] .fav-icon {
+  filter: drop-shadow(0 0 4px var(--fav-glow))
+          drop-shadow(0 0 8px var(--fav-glow));
   animation: fav-glow-flicker 2.6s ease-in-out infinite;
 }
 
-body[data-world="afterlife"] .fav-btn[aria-pressed="true"] .fav-icon {
-  animation: fav-glow-soft 3.4s ease-in-out infinite;
+body[data-world="afterlife"] .fav-btn[aria-pressed="true"] .fav-dot {
+  opacity: 1;
+  filter: drop-shadow(0 0 3px var(--fav-glow))
+          drop-shadow(0 0 6px var(--fav-glow));
+  animation: fav-dot-pulse 3s ease-in-out infinite;
 }
 
+
 .entry {
-  position: relative; 
+  position: relative;
 }
 
 .fav-badge {
@@ -1237,54 +1259,45 @@ body[data-world="afterlife"] .fav-btn[aria-pressed="true"] .fav-icon {
   place-items: center;
   width: 1.1rem;
   height: 1.1rem;
-  color: var(--fav-mid);
   pointer-events: none;
-  filter: drop-shadow(0 0 4px var(--fav-glow))
-          drop-shadow(0 0 8px var(--fav-glow));
 }
-
 .fav-badge .fav-icon {
   width: 100%;
   height: 100%;
 }
 
 body[data-world="real"] .fav-badge .fav-icon {
+  color: var(--fav-mid);
+  filter: drop-shadow(0 0 4px var(--fav-glow))
+          drop-shadow(0 0 8px var(--fav-glow));
   animation: fav-glow-flicker 2.6s ease-in-out infinite;
 }
 
-body[data-world="afterlife"] .fav-badge .fav-icon {
-  animation: fav-glow-soft 3.4s ease-in-out infinite;
+body[data-world="afterlife"] .fav-badge .fav-icon .fav-dot {
+  opacity: 1;
+  filter: drop-shadow(0 0 2px var(--fav-glow))
+          drop-shadow(0 0 5px var(--fav-glow));
+  animation: fav-dot-pulse 3s ease-in-out infinite;
 }
+
 
 .fav-badge--gallery {
   top: 0.5rem;
   right: 0.5rem;
-  width: 1.3rem;
-  height: 1.3rem;
-  padding: 0.15rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0.2rem;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.35);
-  color: var(--fav-mid);
+  background: rgba(0, 0, 0, 0.4);
 }
 
 body[data-world="afterlife"] .fav-badge--gallery {
-  background: rgba(58, 22, 38, 0.35);
+  background: rgba(242, 233, 236, 0.85);  
 }
+
 
 .entry.is-favorite {
   background-image: linear-gradient(270deg, var(--fav-wash), transparent 45%);
-}
-
-
-@keyframes fav-glow-soft {
-  0%, 100% {
-    filter: drop-shadow(0 0 3px var(--fav-glow))
-            drop-shadow(0 0 6px var(--fav-glow));
-  }
-  50% {
-    filter: drop-shadow(0 0 6px var(--fav-glow))
-            drop-shadow(0 0 12px var(--fav-glow));
-  }
 }
 
 @keyframes fav-glow-flicker {
@@ -1295,16 +1308,16 @@ body[data-world="afterlife"] .fav-badge--gallery {
   78%      { filter: drop-shadow(0 0 5px var(--fav-glow)); opacity: 1; }
 }
 
-body[data-world="real"] {
-  --fav-mid:  #a0522d;   
-  --fav-glow: rgba(160, 82, 45, 0.6);
-  --fav-wash: rgba(160, 82, 45, 0.09);
+@keyframes fav-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.82; }
 }
 
-body[data-world="afterlife"] {
-  --fav-mid:  #8c2f4f;                     
-  --fav-glow: rgba(245, 232, 206, 0.95);   
-  --fav-wash: rgba(140, 47, 79, 0.08);
+@media (prefers-reduced-motion: reduce) {
+  .fav-icon,
+  .fav-dot {
+    animation: none !important;
+  }
 }
 
 .help {
