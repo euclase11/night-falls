@@ -18,13 +18,11 @@ function realIcon() {
 
 function afterlifeIcon() {
   return [
-    svgEl('rect', { x: 4, y: 5, width: 16, height: 12, rx: 2, fill: 'none' }),
-    svgEl('path', { d: 'M4 9 L20 9', fill: 'none' }),
-    svgEl('circle', { cx: 8, cy: 19, r: 1.6, fill: 'none' }),
-    svgEl('circle', { cx: 16, cy: 19, r: 1.6, fill: 'none' }),
+    svgEl('path', { d: 'M6 21 L6 11 Q12 4 18 11 L18 21', fill: 'none' }),
+    svgEl('path', { d: 'M6 21 L18 21', fill: 'none' }),
+    svgEl('circle', { cx: 12, cy: 15, r: 0.9, fill: 'currentColor', stroke: 'none' }),
   ];
 }
-
 export function worldFavIcon(world = 'real') {
   const svg = svgEl('svg', {
     viewBox: '0 0 24 24',

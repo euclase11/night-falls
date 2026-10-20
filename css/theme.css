@@ -1268,7 +1268,7 @@ body[data-world="afterlife"] .fav-badge .fav-icon {
 }
 
 body[data-world="afterlife"] .fav-badge--gallery {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(58, 22, 38, 0.35);
 }
 
 .entry.is-favorite {
@@ -1302,9 +1302,9 @@ body[data-world="real"] {
 }
 
 body[data-world="afterlife"] {
-  --fav-mid:  #e5d9c2;   
-  --fav-glow: rgba(240, 230, 200, 0.85);
-  --fav-wash: rgba(217, 220, 201, 0.28);
+  --fav-mid:  #8c2f4f;                     
+  --fav-glow: rgba(245, 232, 206, 0.95);   
+  --fav-wash: rgba(140, 47, 79, 0.08);
 }
 
 .help {
