@@ -97,7 +97,7 @@ function buildGraph(entry, relations, types, characters, onOpen) {
   const height = 340;
   const cx = width / 2;
   const cy = height / 2;
-  const radius = 120;
+  const radius = keys.length <= 2 ? 120 : 130;
   const positions = new Map([[centerKey, { x: cx, y: cy, r: 30 }]]);
   keys.forEach((key, index) => {
     const angle = -Math.PI / 2 + (index * 2 * Math.PI) / keys.length;
@@ -244,9 +244,22 @@ function buildGraph(entry, relations, types, characters, onOpen) {
       node.append(letter);
     }
 
-    const label = svgEl('text', { class: 'rel-label', y: position.r + 15, 'text-anchor': 'middle' });
-    label.textContent = person.name.length > 14 ? `${person.name.slice(0, 13)}…` : person.name;
-    node.append(label);
+    const title = svgEl('title');
+    title.textContent = person.name;
+    node.append(title);
+
+
+    node.addEventListener('pointerenter', (event) => {
+      if (event.pointerType === 'mouse') showTip(node, person.name, event);
+    });
+    node.addEventListener('pointermove', (event) => {
+      if (event.pointerType === 'mouse' && tipOwner === node) {
+        showTip(node, person.name, event);
+      }
+    });
+    node.addEventListener('pointerleave', (event) => {
+      if (event.pointerType === 'mouse') hideTip();
+    });
 
     if (!isCenter) {
       node.setAttribute('tabindex', '0');

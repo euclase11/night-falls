@@ -2,6 +2,7 @@ import { h, readableText } from './util.js';
 import { store, refLabel } from './store.js';
 import { renderRich, plainText } from './richtext.js';
 import { renderRelationsPanel } from './relations.js';
+import { worldFavIcon } from './favicons.js';
 
 function applyColor(node, color) {
   if (!color) return;
@@ -314,6 +315,10 @@ export function renderEntries(items, emptyText, onSelect) {
     'ul',
     { class: 'entries' },
     items.map((item) => {
+      const key = `${item.table}:${item.id}`;
+      const isFav = store.isFavorite(key);
+      const itemWorld = item.world || document.body.dataset.world || 'real';
+
       const node = h(
         'li',
         {
@@ -321,11 +326,14 @@ export function renderEntries(items, emptyText, onSelect) {
             'entry' +
             (onSelect ? ' is-clickable' : '') +
             (item.imageUrl ? ' has-thumb' : '') +
-            (store.isFavorite(`${item.table}:${item.id}`) ? ' is-favorite' : ''),
-          dataset: item.id ? { entry: `${item.table}:${item.id}` } : {},
+            (isFav ? ' is-favorite' : ''),
+          dataset: item.id ? { entry: key } : {},
           tabindex: onSelect ? '0' : null,
           role: onSelect ? 'button' : null,
         },
+        isFav
+          ? h('span', { class: 'fav-badge', 'aria-hidden': 'true' }, worldFavIcon(itemWorld))
+          : null,
         renderThumbnail(item.imageUrl, item.name),
         h(
           'div',
@@ -564,10 +572,11 @@ function renderRefList(title, load, onOpen) {
 /* ---------- Универсальный бланк записи ---------- */
 
 function favoriteButton(isFavorite, onToggle) {
+  const world = document.body.dataset.world === 'afterlife' ? 'afterlife' : 'real';
   const button = h(
     'button',
     { type: 'button', class: 'icon-btn fav-btn' },
-    h('span', { class: 'fav-mark', 'aria-hidden': 'true' })
+    worldFavIcon(world)
   );
 
   function sync(value) {
@@ -676,14 +685,21 @@ export function renderGallery(items, emptyText, onSelect) {
     'ul',
     { class: 'gallery' },
     items.map((item) => {
+      const key = `${item.table}:${item.id}`;
+      const isFav = store.isFavorite(key);
+      const itemWorld = item.world || document.body.dataset.world || 'real';
+
       const button = h(
         'button',
         {
           type: 'button',
-          class: 'gallery-item' + (store.isFavorite(`${item.table}:${item.id}`) ? ' is-favorite' : ''),
-          dataset: item.id ? { entry: `${item.table}:${item.id}` } : {},
+          class: 'gallery-item' + (isFav ? ' is-favorite' : ''),
+          dataset: item.id ? { entry: key } : {},
           onClick: () => onSelect(item, button),
         },
+        isFav
+          ? h('span', { class: 'fav-badge fav-badge--gallery', 'aria-hidden': 'true' }, worldFavIcon(itemWorld))
+          : null,
         h('img', { src: item.imageUrl, alt: item.name, loading: 'lazy' }),
         h('span', {}, item.name)
       );

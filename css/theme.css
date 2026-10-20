@@ -1062,11 +1062,6 @@ body[data-world="afterlife"] .rt-search {
     font: 600 15px var(--font-display);
 }
 
-.rel-label {
-    fill: var(--ink);
-    font: 12px var(--font-body);
-}
-
 .rel-tip {
     position: absolute;
     z-index: 3;
@@ -1195,99 +1190,121 @@ body[data-world="afterlife"] {
     --fav-wash: rgba(255, 226, 170, 0.35);
 }
 
-.fav-mark {
-    display: block;
-    width: 0.9rem;
-    height: 0.9rem;
-    border: 1.5px solid currentColor;
-    border-radius: 50%;
-    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+.fav-icon {
+  display: block;
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.fav-btn[aria-pressed="true"] .fav-mark,
-.entry.is-favorite::after,
-.gallery-item.is-favorite::after {
-    border-color: transparent;
-    background: radial-gradient(circle at 40% 35%, var(--fav-core), var(--fav-mid) 55%, var(--fav-edge));
-    box-shadow: 0 0 8px 2px var(--fav-glow);
-    animation: fav-lantern 3.4s ease-in-out infinite;
+.fav-btn .fav-icon {
+  stroke: var(--muted);
+  transition: stroke 0.2s ease, filter 0.3s ease, opacity 0.3s ease;
 }
 
-body[data-world="real"] .fav-btn[aria-pressed="true"] .fav-mark,
-body[data-world="real"] .entry.is-favorite::after,
-body[data-world="real"] .gallery-item.is-favorite::after {
-    animation: fav-flicker 2.6s ease-in-out infinite;
+.fav-btn:hover .fav-icon {
+  stroke: var(--accent-text, var(--accent));
+}
+
+.fav-btn[aria-pressed="true"] .fav-icon {
+  stroke: var(--fav-mid);
+  filter: drop-shadow(0 0 4px var(--fav-glow))
+          drop-shadow(0 0 8px var(--fav-glow));
+}
+
+body[data-world="real"] .fav-btn[aria-pressed="true"] .fav-icon {
+  animation: fav-glow-flicker 2.6s ease-in-out infinite;
+}
+
+body[data-world="afterlife"] .fav-btn[aria-pressed="true"] .fav-icon {
+  animation: fav-glow-soft 3.4s ease-in-out infinite;
+}
+
+.entry {
+  position: relative; 
+}
+
+.fav-badge {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.4rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--fav-mid);
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px var(--fav-glow))
+          drop-shadow(0 0 8px var(--fav-glow));
+}
+
+.fav-badge .fav-icon {
+  width: 100%;
+  height: 100%;
+}
+
+body[data-world="real"] .fav-badge .fav-icon {
+  animation: fav-glow-flicker 2.6s ease-in-out infinite;
+}
+
+body[data-world="afterlife"] .fav-badge .fav-icon {
+  animation: fav-glow-soft 3.4s ease-in-out infinite;
+}
+
+.fav-badge--gallery {
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.3rem;
+  height: 1.3rem;
+  padding: 0.15rem;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--fav-mid);
+}
+
+body[data-world="afterlife"] .fav-badge--gallery {
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .entry.is-favorite {
-    position: relative;
-    background-image: linear-gradient(90deg, var(--fav-wash), transparent 45%);
+  background-image: linear-gradient(270deg, var(--fav-wash), transparent 45%);
 }
 
-.entry.is-favorite::after {
-    content: "";
-    position: absolute;
-    top: 1.4rem;
-    left: 0.2rem;
-    width: 0.5rem;
-    height: 0.5rem;
-    border-radius: 50%;
+
+@keyframes fav-glow-soft {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px var(--fav-glow))
+            drop-shadow(0 0 6px var(--fav-glow));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px var(--fav-glow))
+            drop-shadow(0 0 12px var(--fav-glow));
+  }
 }
 
-.gallery-item {
-    position: relative;
+@keyframes fav-glow-flicker {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--fav-glow)); opacity: 1; }
+  18%      { filter: drop-shadow(0 0 2px var(--fav-glow)); opacity: 0.82; }
+  37%      { filter: drop-shadow(0 0 7px var(--fav-glow)); opacity: 1; }
+  55%      { filter: drop-shadow(0 0 3px var(--fav-glow)); opacity: 0.9; }
+  78%      { filter: drop-shadow(0 0 5px var(--fav-glow)); opacity: 1; }
 }
 
-.gallery-item.is-favorite::after {
-    content: "";
-    position: absolute;
-    top: 0.55rem;
-    right: 0.55rem;
-    width: 0.7rem;
-    height: 0.7rem;
-    border: 1.5px solid rgba(255, 255, 255, 0.85);
-    border-radius: 50%;
+body[data-world="real"] {
+  --fav-mid:  #a0522d;   
+  --fav-glow: rgba(160, 82, 45, 0.6);
+  --fav-wash: rgba(160, 82, 45, 0.09);
 }
 
-@keyframes fav-flicker {
-
-    0%,
-    100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-
-    18% {
-        opacity: 0.78;
-        transform: scale(0.94);
-    }
-
-    37% {
-        opacity: 1;
-        transform: scale(1.05);
-    }
-
-    55% {
-        opacity: 0.86;
-        transform: scale(0.98);
-    }
-
-    78% {
-        opacity: 0.97;
-        transform: scale(1);
-    }
-}
-
-@keyframes fav-lantern {
-
-    0%,
-    100% {
-        box-shadow: 0 0 6px 1px var(--fav-glow);
-    }
-
-    50% {
-        box-shadow: 0 0 14px 5px var(--fav-glow);
-    }
+body[data-world="afterlife"] {
+  --fav-mid:  #d9dcc9;   
+  --fav-glow: rgba(232, 235, 220, 0.9);
+  --fav-wash: rgba(217, 220, 201, 0.28);
 }
 
 .help {
@@ -1331,13 +1348,4 @@ body[data-world="afterlife"] .help {
     margin-top: 1.75rem;
     color: var(--accent-text, var(--accent));
     font-size: 1.15rem;
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-    .fav-btn .fav-mark,
-    .entry.is-favorite::after,
-    .gallery-item.is-favorite::after {
-        animation: none !important;
-    }
 }
