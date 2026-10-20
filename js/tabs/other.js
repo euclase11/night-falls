@@ -1,6 +1,6 @@
 // js/tabs/other.js
 import { store } from '../store.js';
-import { matchesQuery } from '../util.js';
+import { matchesQuery, favoritesFirst } from '../util.js';
 import { renderEntries, renderSegmented, renderCollapsible } from '../render.js';
 
 export const otherTab = {
@@ -17,14 +17,17 @@ export const otherTab = {
     ]);
     return [...settlements, ...events, ...other];
   },
+  
+  useFavorites: true,
 
   async load(state) {
-    const items = await this.loadAll();
-    return items
+    const [items, favorites] = await Promise.all([this.loadAll(), store.favorites()]);
+    const sorted = items
       .filter((i) => i.world === state.world)
       .filter((i) => state.kind === 'all' || i.kind === state.kind)
       .filter((i) => matchesQuery(i, state.query, ['name', 'kind', 'meta', 'description', 'tags']))
       .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    return favoritesFirst(sorted, favorites);
   },
 
   async renderControls(state, ctx) {

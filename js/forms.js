@@ -1,5 +1,6 @@
 import { uploadFile } from './upload.js';
 import { store } from './store.js';
+import { saveRelations } from './relations.js';
 
 const WORLD_FIELD = {
   name: 'world',
@@ -12,6 +13,7 @@ const WORLD_FIELD = {
 };
 
 const LINKS_FIELD = { name: 'links', label: 'Связанные записи', type: 'links' };
+const RELATIONS_FIELD = { name: 'relations', label: 'Отношения', type: 'relations' };
 const POSITION_FIELD = { name: 'position', label: 'Положение на таймлайне', type: 'position' };
 
 async function resolveOrder(position, existing) {
@@ -59,11 +61,12 @@ export const FORMS = {
     button: '+ Добавить персонажа',
     fields: [
       { name: 'name', label: 'Имя', type: 'text', required: true, maxLength: 80 },
-      { name: 'description', label: 'Описание', type: 'textarea', rows: 4, maxLength: 20000 },
+      { name: 'description', label: 'Описание', type: 'textarea', rows: 4, maxLength: 20000, rich: true },
       WORLD_FIELD,
       { name: 'image', label: 'Главная картинка', type: 'file', accept: 'image/*' },
       IMAGES_FIELD,
       LINKS_FIELD,
+      RELATIONS_FIELD,
     ],
     async toRow(v, existing) {
       let imageUrl = existing?.image_url ?? null;
@@ -80,6 +83,9 @@ export const FORMS = {
         links: v.links,
       };
     },
+    async afterSave(row, v) {
+      if (v.relations) await saveRelations(row.id, v.relations);
+    },
   },
 
   events: {
@@ -88,7 +94,7 @@ export const FORMS = {
     button: '+ Добавить событие',
     fields: [
       { name: 'title', label: 'Заголовок', type: 'text', required: true, maxLength: 120 },
-      { name: 'description', label: 'Описание', type: 'textarea', rows: 4 },
+      { name: 'description', label: 'Описание', type: 'textarea', rows: 4, rich: true },
       WORLD_FIELD,
       {
         name: 'scope',
@@ -122,7 +128,7 @@ export const FORMS = {
     button: '+ Добавить поселение',
     fields: [
       { name: 'name', label: 'Название', type: 'text', required: true, maxLength: 80 },
-      { name: 'description', label: 'Описание', type: 'textarea', rows: 4 },
+      { name: 'description', label: 'Описание', type: 'textarea', rows: 4, rich: true },
       WORLD_FIELD,
       { name: 'x', label: 'X на карте (%)', type: 'number', step: '0.01' },
       { name: 'y', label: 'Y на карте (%)', type: 'number', step: '0.01' },
@@ -155,7 +161,7 @@ export const FORMS = {
     fields: [
       { name: 'type', label: 'Тип', type: 'text', required: true, placeholder: 'Заметка, Артефакт, ...' },
       { name: 'title', label: 'Название', type: 'text', required: true, maxLength: 120 },
-      { name: 'description', label: 'Описание', type: 'textarea', rows: 4 },
+      { name: 'description', label: 'Описание', type: 'textarea', rows: 4, rich: true },
       WORLD_FIELD,
       IMAGES_FIELD,
       LINKS_FIELD,
@@ -178,7 +184,7 @@ export const FORMS = {
     button: '+ Добавить картинку',
     fields: [
       { name: 'title', label: 'Название', type: 'text', required: true, maxLength: 120 },
-      { name: 'description', label: 'Описание', type: 'textarea', rows: 3 },
+      { name: 'description', label: 'Описание', type: 'textarea', rows: 3, rich: true },
       WORLD_FIELD,
       { name: 'image', label: 'Картинка', type: 'file', accept: 'image/*' },
       LINKS_FIELD,

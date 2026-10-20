@@ -48,3 +48,9 @@ export function applyColor(node, color) {
   node.style.setProperty('--marker-color', color);
   node.style.setProperty('--marker-ink', readableText(color));
 }
+
+export function favoritesFirst(items, favorites) {
+  if (!favorites || !favorites.size) return items;
+  const isFavorite = (item) => favorites.has(`${item.table}:${item.id}`);
+  return [...items.filter(isFavorite), ...items.filter((item) => !isFavorite(item))];
+}

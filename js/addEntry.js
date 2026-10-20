@@ -3,6 +3,9 @@ import { FORMS } from './forms.js';
 import { store, refLabel } from './store.js';
 import { h } from './util.js';
 import { deleteFiles, imageUrlsOf } from './upload.js';
+import { createRichField } from './editor.js';
+import { renderRelationsField } from './relations.js';
+import { hasLinkKey, unlinkKey } from './richtext.js';
 
 const section = document.getElementById('entry-form-section');
 const formEl = document.getElementById('entry-form');
@@ -70,6 +73,13 @@ function renderLinksField(field, prefill) {
 
   updateSummary();
   group.getValue = () => [...selected];
+  group.addKey = (key) => {
+    selected.add(key);
+    const row = rows.find((item) => item.key === key);
+    if (row) row.checkbox.checked = true;
+    updateSummary();
+    applyFilters();
+  };
 
   filter.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') event.preventDefault();
@@ -119,6 +129,7 @@ function renderLinksField(field, prefill) {
           key: option.key,
           world: option.world,
           text: option.base.toLowerCase().replaceAll('ё', 'е'),
+          checkbox,
         };
       });
 
@@ -230,6 +241,24 @@ function renderImagesField(field, prefill) {
 }
 
 function renderField(field, prefill = {}) {
+  if (field.type === 'textarea' && field.rich) {
+    const self = editing ? `${editing.table}:${editing.id}` : null;
+    return createRichField(field, prefill, {
+      self,
+      onLinkPicked: (target) => {
+        const links = fieldsEl.querySelector('#field-links');
+        if (!links || !links.addKey) return;
+        if (self && (target.links ?? []).includes(self)) return;
+        links.addKey(`${target.table}:${target.id}`);
+      },
+    });
+  }
+  if (field.type === 'relations') {
+    return renderRelationsField(field, {
+      selfId: editing?.id ?? null,
+      world: document.body.dataset.world === 'afterlife' ? 'afterlife' : 'real',
+    });
+  }
   if (field.type === 'position') return renderPositionField(field);
   if (field.type === 'links') return renderLinksField(field, prefill);
   if (field.type === 'images') return renderImagesField(field, prefill);
@@ -312,7 +341,7 @@ function collectValues(config) {
   const values = {};
   for (const field of config.fields) {
     const node = fieldsEl.querySelector(`#field-${field.name}`);
-    if (field.type === 'links' || field.type === 'images' || field.type === 'position') values[field.name] = node.getValue();
+    if (typeof node.getValue === 'function') values[field.name] = node.getValue();
     else if (field.type === 'file') values[field.name] = node.files[0] || null;
     else values[field.name] = node.value;
   }
@@ -363,11 +392,14 @@ export function editEntry(entry) {
 async function removeReferences(entry) {
   const key = `${entry.table}:${entry.id}`;
   const all = await store.all();
-  const referrers = all.filter((item) => item.links.includes(key));
+  const referrers = all.filter(
+    (item) => item.raw && (item.links.includes(key) || hasLinkKey(item.raw.description, key))
+  );
   await Promise.all(
     referrers.map(async (item) => {
-      const links = item.links.filter((value) => value !== key);
-      const { error } = await supabase.from(item.table).update({ links }).eq('id', item.id);
+      const patch = { links: item.links.filter((value) => value !== key) };
+      if (hasLinkKey(item.raw.description, key)) patch.description = unlinkKey(item.raw.description, key);
+      const { error } = await supabase.from(item.table).update(patch).eq('id', item.id);
       if (error) console.error(error);
     })
   );
@@ -512,6 +544,16 @@ formEl?.addEventListener('submit', async (e) => {
       const kept = new Set(imageUrlsOf(row));
       const removed = imageUrlsOf(previous).filter((url) => !kept.has(url));
       await deleteFiles(removed).catch(console.error);
+    }
+
+    try {
+      await config.afterSave?.(data[0], values);
+    } catch (relationError) {
+      console.error(relationError);
+      editing = { id: data[0].id, table: config.table, raw: data[0] };
+      document.dispatchEvent(new CustomEvent('data:updated'));
+      showMessage('Запись сохранена, но отношения не сохранились: ' + (relationError.message || relationError), 'is-error');
+      return;
     }
 
     showMessage('Сохранено!', 'is-success');

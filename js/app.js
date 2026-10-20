@@ -1,4 +1,4 @@
-// js/app.js
+import { supabase } from './supabase.js';
 import { config } from './config.js';
 import { h } from './util.js';
 import { renderEntryDetails, renderSkeleton } from './render.js';
@@ -215,6 +215,12 @@ function showEntry(entry) {
   els.sheetBody.replaceChildren(
     renderEntryDetails(entry, {
       canEdit: document.body.dataset.auth === 'in' && !entry.derived,
+      isFavorite: store.isFavorite(`${entry.table}:${entry.id}`),
+      onToggleFavorite: async () => {
+        const value = await store.toggleFavorite(entry);
+        if (TABS[state.tab].useFavorites) renderResults().then(() => markActive(entry));
+        return value;
+      },
       onOpen: (next) => {
         sheetHistory.push(entry);
         showEntry(next);
@@ -312,11 +318,32 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden || Date.now() - lastSync < 120000) return;
   lastSync = Date.now();
   invalidateCache();
+  store.favorites();
   renderControls();
   renderResults();
 });
 
 /* ---------- Старт ---------- */
+let authUserId;
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  const id = session?.user?.id ?? null;
+  if (authUserId === undefined) {
+    authUserId = id;
+    return;
+  }
+  if (id === authUserId) return;
+  authUserId = id;
+  setTimeout(() => {
+    store.resetFavorites();
+    if (!id) closeSheet(false);
+    store.favorites().then(() => {
+      if (TABS[state.tab].useFavorites) renderResults();
+    });
+  }, 0);
+});
+
+store.favorites();
 
 document.title = config.title;
 els.title.textContent = config.title;

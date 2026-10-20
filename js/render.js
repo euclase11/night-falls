@@ -1,6 +1,7 @@
-// js/render.js
 import { h, readableText } from './util.js';
 import { store, refLabel } from './store.js';
+import { renderRich, plainText } from './richtext.js';
+import { renderRelationsPanel } from './relations.js';
 
 function applyColor(node, color) {
   if (!color) return;
@@ -278,7 +279,7 @@ export function renderTimeline(events, emptyText, onSelect, onReorder) {
       },
       event.date ? h('span', { class: 'timeline-date' }, event.date) : null,
       h('h3', {}, event.title),
-      h('p', { class: 'entry-desc' }, event.description)
+      h('p', { class: 'entry-desc' }, plainText(event.description))
     );
 
     eventByNode.set(item, event);
@@ -316,7 +317,11 @@ export function renderEntries(items, emptyText, onSelect) {
       const node = h(
         'li',
         {
-          class: 'entry' + (onSelect ? ' is-clickable' : '') + (item.imageUrl ? ' has-thumb' : ''),
+          class:
+            'entry' +
+            (onSelect ? ' is-clickable' : '') +
+            (item.imageUrl ? ' has-thumb' : '') +
+            (store.isFavorite(`${item.table}:${item.id}`) ? ' is-favorite' : ''),
           dataset: item.id ? { entry: `${item.table}:${item.id}` } : {},
           tabindex: onSelect ? '0' : null,
           role: onSelect ? 'button' : null,
@@ -329,7 +334,7 @@ export function renderEntries(items, emptyText, onSelect) {
           item.kind ? h('span', { class: 'entry-kind' }, item.kind) : null
         ),
         item.meta ? h('p', { class: 'entry-meta' }, item.meta) : null,
-        h('p', { class: 'entry-desc' }, item.description),
+        h('p', { class: 'entry-desc' }, plainText(item.description)),
         renderTags(item.tags)
       );
 
@@ -558,10 +563,80 @@ function renderRefList(title, load, onOpen) {
 
 /* ---------- Универсальный бланк записи ---------- */
 
-export function renderEntryDetails(entry, { canEdit = false, onOpen, onBack, onEdit, onDelete } = {}) {
+function favoriteButton(isFavorite, onToggle) {
+  const button = h(
+    'button',
+    { type: 'button', class: 'icon-btn fav-btn' },
+    h('span', { class: 'fav-mark', 'aria-hidden': 'true' })
+  );
+
+  function sync(value) {
+    const label = value ? 'Убрать из избранного' : 'В избранное';
+    button.setAttribute('aria-pressed', String(value));
+    button.setAttribute('aria-label', label);
+    button.title = label;
+  }
+
+  sync(isFavorite);
+
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    try {
+      sync(await onToggle());
+    } catch (error) {
+      console.error(error);
+      window.alert('Не удалось изменить избранное: ' + (error.message || error));
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  return button;
+}
+
+export function renderEntryDetails(
+  entry,
+  { canEdit = false, isFavorite = false, onToggleFavorite, onOpen, onBack, onEdit, onDelete } = {}
+) {
   const related = entry.images ?? [];
   const gallery = [entry.imageUrl, ...related].filter(Boolean);
   const offset = entry.imageUrl ? 1 : 0;
+
+  const openLink = (key) =>
+    store.resolve([key]).then(([target]) => {
+      if (target) onOpen?.(target);
+    });
+
+  const main = h(
+    'div',
+    { class: 'details-main' },
+    renderRich(entry.description, { onLink: openLink }),
+    renderRelatedImages(related, gallery, offset),
+    entry.links && entry.links.length ? renderRefList('Связано', () => store.resolve(entry.links), onOpen) : null,
+    renderRefList('Упоминается в', () => store.backlinks(entry), onOpen)
+  );
+
+  let tabs = null;
+  let relations = null;
+
+  if (entry.table === 'characters') {
+    relations = h('div', { class: 'details-relations', hidden: true });
+    let loaded = false;
+    tabs = renderSegmented({
+      options: [['main', 'Описание'], ['relations', 'Отношения']],
+      current: 'main',
+      label: 'Раздел карточки',
+      className: 'segmented details-tabs',
+      onPick: (value) => {
+        main.hidden = value !== 'main';
+        relations.hidden = value !== 'relations';
+        if (value === 'relations' && !loaded) {
+          loaded = true;
+          relations.replaceChildren(renderRelationsPanel(entry, onOpen));
+        }
+      },
+    });
+  }
 
   return h(
     'div',
@@ -577,14 +652,14 @@ export function renderEntryDetails(entry, { canEdit = false, onOpen, onBack, onE
     h('h2', {}, entry.name),
     entry.kind ? h('p', { class: 'details-kind' }, entry.kind) : null,
     entry.meta ? h('p', { class: 'details-meta' }, entry.meta) : null,
-    h('p', {}, entry.description),
-    renderRelatedImages(related, gallery, offset),
-    entry.links && entry.links.length ? renderRefList('Связано', () => store.resolve(entry.links), onOpen) : null,
-    renderRefList('Упоминается в', () => store.backlinks(entry), onOpen),
+    tabs,
+    main,
+    relations,
     canEdit
       ? h(
         'div',
         { class: 'details-actions' },
+        favoriteButton(isFavorite, onToggleFavorite),
         iconButton('edit', 'Редактировать', onEdit),
         iconButton('trash', 'Удалить', onDelete, 'danger')
       )
@@ -605,7 +680,7 @@ export function renderGallery(items, emptyText, onSelect) {
         'button',
         {
           type: 'button',
-          class: 'gallery-item',
+          class: 'gallery-item' + (store.isFavorite(`${item.table}:${item.id}`) ? ' is-favorite' : ''),
           dataset: item.id ? { entry: `${item.table}:${item.id}` } : {},
           onClick: () => onSelect(item, button),
         },

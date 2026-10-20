@@ -1,3 +1,4 @@
+import { supabase } from './supabase.js';
 import { Character, Settlement, Event, MiscEntry, GalleryItem } from './models.js';
 
 export const REF_LABELS = {
@@ -19,6 +20,7 @@ const cache = {
   events: null,
   other: null,
   gallery: null,
+  favorites: null,
 };
 
 const TABLE_TO_CACHE = {
@@ -197,5 +199,48 @@ export const store = {
     const all = await this.all();
     const byKey = new Map(all.map((entry) => [`${entry.table}:${entry.id}`, entry]));
     return keys.map((key) => byKey.get(key)).filter(Boolean);
+  },
+
+    async favorites() {
+    if (cache.favorites) return cache.favorites;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return new Set();
+    const { data, error } = await supabase.from('favorites').select('entry_table, entry_id');
+    if (error) {
+      console.error(error);
+      return new Set();
+    }
+    cache.favorites = new Set(data.map((row) => `${row.entry_table}:${row.entry_id}`));
+    return cache.favorites;
+  },
+
+  isFavorite(key) {
+    return cache.favorites ? cache.favorites.has(key) : false;
+  },
+
+  resetFavorites() {
+    cache.favorites = null;
+  },
+
+  async toggleFavorite(entry) {
+    const key = `${entry.table}:${entry.id}`;
+    const favorites = await this.favorites();
+    if (favorites.has(key)) {
+      const { error } = await supabase
+        .from('favorites')
+        .delete()
+        .eq('entry_table', entry.table)
+        .eq('entry_id', String(entry.id));
+      if (error) throw error;
+      favorites.delete(key);
+    } else {
+      const { error } = await supabase
+        .from('favorites')
+        .insert({ entry_table: entry.table, entry_id: String(entry.id) });
+      if (error) throw error;
+      favorites.add(key);
+      cache.favorites = favorites;
+    }
+    return favorites.has(key);
   },
 };
