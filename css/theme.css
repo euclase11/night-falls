@@ -1200,6 +1200,7 @@ body[data-world="afterlife"] {
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+  overflow: visible;  
 }
 
 .fav-icon .fav-ring {
@@ -1218,10 +1219,52 @@ body[data-world="real"] {
 }
 
 body[data-world="afterlife"] {
-  --fav-ring: #794d60;                     
-  --fav-dot:  #fff3d0;                     
-  --fav-glow: rgba(255, 232, 184, 1);     
+  --fav-ring: #794d60;
+  --fav-dot:  #ffd27a;                     
+  --fav-glow: rgba(255, 190, 100, 1);      
   --fav-wash: rgba(140, 47, 79, 0.06);
+}
+
+body[data-world="afterlife"] .fav-btn[aria-pressed="true"] .fav-dot {
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 2px var(--fav-glow))
+    drop-shadow(0 0 5px var(--fav-glow))
+    drop-shadow(0 0 10px var(--fav-glow));
+  animation: fav-dot-pulse 3s ease-in-out infinite;
+}
+
+body[data-world="afterlife"] .fav-badge .fav-icon .fav-dot {
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 2px var(--fav-glow))
+    drop-shadow(0 0 4px var(--fav-glow))
+    drop-shadow(0 0 8px var(--fav-glow));
+  animation: fav-dot-pulse 3s ease-in-out infinite;
+}
+
+.fav-btn .fav-dot {
+  opacity: 0.7;                                /* было 0.5 — стало заметнее */
+  filter: drop-shadow(0 0 2px var(--fav-glow, rgba(255, 210, 140, 0.5)));
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+body[data-world="real"] .fav-btn[aria-pressed="true"] .fav-icon {
+  filter:
+    drop-shadow(0 0 3px var(--fav-glow))
+    drop-shadow(0 0 6px var(--fav-glow))
+    drop-shadow(0 0 10px var(--fav-glow));
+  animation: fav-glow-flicker 2.6s ease-in-out infinite;
+}
+
+.fav-icon .fav-halo {
+  fill: var(--fav-glow);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+body[data-world="afterlife"] .fav-btn[aria-pressed="true"] .fav-halo,
+body[data-world="afterlife"] .fav-badge .fav-halo {
+  opacity: 0.55;
 }
 
 .fav-btn .fav-icon {
