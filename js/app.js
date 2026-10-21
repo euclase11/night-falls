@@ -180,8 +180,9 @@ async function renderResults({ skeleton = false } = {}) {
     clearTimeout(renderSkeletonTimer);
     els.view.classList.remove('is-busy');
     console.error(error);
-    els.view.replaceChildren(
-      h('p', { class: 'empty' }, 'Не удалось загрузить данные. Проверь Supabase и RLS.')
+        els.view.replaceChildren(
+      h('p', { class: 'empty' }, 'Не удалось загрузить данные. Проверь Supabase и RLS.'),
+      h('p', { class: 'empty' }, `Подробности: ${error?.message || error}`)
     );
   } finally {
     loader.stop();
