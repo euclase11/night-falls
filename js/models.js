@@ -1,6 +1,21 @@
 // js/models.js
 import { supabase } from './supabase.js';
 
+async function withRetry(run, attempts = 3) {
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const result = await run();
+      if (!result.error || !/fetch|network|load failed/i.test(result.error.message || '')) return result;
+      lastError = result.error;
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+  }
+  throw lastError;
+}
+
 /**
  * Базовый класс для всех записей.
  * Наследники задают static table и переопределяют toPayload()/toCard().
@@ -14,11 +29,13 @@ export class Entry {
 
   /** Список записей с простыми фильтрами ({ world: 'real' }). */
   static async list(filters = {}) {
-    let q = supabase.from(this.table).select('*');
-    for (const [key, value] of Object.entries(filters)) {
-      q = q.eq(key, value);
-    }
-    const { data, error } = await q;
+    const { data, error } = await withRetry(() => {
+      let q = supabase.from(this.table).select('*');
+      for (const [key, value] of Object.entries(filters)) {
+        q = q.eq(key, value);
+      }
+      return q;
+    });
     if (error) throw error;
     return (data ?? []).map((row) => new this(row));
   }

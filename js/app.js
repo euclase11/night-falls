@@ -180,9 +180,10 @@ async function renderResults({ skeleton = false } = {}) {
     clearTimeout(renderSkeletonTimer);
     els.view.classList.remove('is-busy');
     console.error(error);
-        els.view.replaceChildren(
-      h('p', { class: 'empty' }, 'Не удалось загрузить данные. Проверь Supabase и RLS.'),
-      h('p', { class: 'empty' }, `Подробности: ${error?.message || error}`)
+    els.view.replaceChildren(
+      h('p', { class: 'empty' }, 'Не удалось загрузить данные. Проверь соединение и попробуй ещё раз.'),
+      h('p', { class: 'empty' }, `Подробности: ${error?.message || error}`),
+      h('button', { type: 'button', class: 'rel-add', onClick: () => renderResults({ skeleton: true }) }, 'Повторить')
     );
   } finally {
     loader.stop();
