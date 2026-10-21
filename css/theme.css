@@ -1407,8 +1407,6 @@ body[data-world="afterlife"] .help {
 }
 
 body[data-world="real"] button.icon-btn.fav-btn[aria-pressed="true"] {
-  border-color: #e8685f;
-  background: color-mix(in srgb, #e8685f 16%, var(--surface));
   color: #ff9a85;
 }
 
