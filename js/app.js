@@ -5,6 +5,8 @@ import { renderEntryDetails, renderSkeleton } from './render.js';
 import { TABS } from './tabs/index.js';
 import { store, invalidateCache } from './store.js';
 import { editEntry, deleteEntry, moveEvent } from './addEntry.js';
+import { destroyMapView } from './map.js';
+import { loader } from './loader.js';
 
 const DEFAULT_TAB = 'timeline';
 
@@ -162,6 +164,8 @@ async function renderResults({ skeleton = false } = {}) {
     els.view.classList.add('is-busy');
   }
 
+  loader.start();
+
   try {
     const tab = TABS[state.tab];
     const items = await tab.load(state);
@@ -179,6 +183,8 @@ async function renderResults({ skeleton = false } = {}) {
     els.view.replaceChildren(
       h('p', { class: 'empty' }, 'Не удалось загрузить данные. Проверь Supabase и RLS.')
     );
+  } finally {
+    loader.stop();
   }
 }
 
@@ -211,11 +217,16 @@ function markActive(entry) {
   });
 }
 
-function showEntry(entry) {
+let showToken = 0;
+
+async function showEntry(entry) {
+  const token = ++showToken;
+  const favorites = await store.favorites();
+  if (token !== showToken) return;
   els.sheetBody.replaceChildren(
     renderEntryDetails(entry, {
       canEdit: document.body.dataset.auth === 'in' && !entry.derived,
-      isFavorite: store.isFavorite(`${entry.table}:${entry.id}`),
+      isFavorite: favorites.has(`${entry.table}:${entry.id}`),
       onToggleFavorite: async () => {
         const value = await store.toggleFavorite(entry);
         if (TABS[state.tab].useFavorites) renderResults().then(() => markActive(entry));
@@ -249,6 +260,7 @@ function selectEntry(entry, trigger) {
 }
 
 function closeSheet(restoreFocus = true) {
+  showToken += 1;
   if (els.sheet.hidden) return;
   els.sheet.hidden = true;
   sheetResizer.hidden = true;
@@ -261,6 +273,7 @@ function closeSheet(restoreFocus = true) {
 /* ---------- Вкладки ---------- */
 
 function showTab(name) {
+  destroyMapView();
   state.tab = name;
   state.query = '';
   state.kind = 'all';
@@ -291,9 +304,14 @@ els.worldSwitch.addEventListener('click', (event) => {
   renderResults({ skeleton: true });
 });
 
+let searchTimer = null;
+
 els.search.addEventListener('input', () => {
-  state.query = els.search.value;
-  renderResults();
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    state.query = els.search.value;
+    renderResults();
+  }, 200);
 });
 
 els.sheetClose.addEventListener('click', () => closeSheet());
@@ -318,6 +336,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden || Date.now() - lastSync < 120000) return;
   lastSync = Date.now();
   invalidateCache();
+  store.resetFavorites();
   store.favorites();
   renderControls();
   renderResults();

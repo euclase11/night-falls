@@ -8,6 +8,13 @@ const ZOOM_STEP = 1.2;
 const DRAG_THRESHOLD = 8;
 const LONG_PRESS_MS = 600;
 
+let activeMap = null;
+
+export function destroyMapView() {
+  activeMap?.abort();
+  activeMap = null;
+}
+
 function renderDot(settlement) {
   const dot = h('span', { class: 'dot' }, String(settlement.number ?? ''));
   applyColor(dot, settlement.color);
@@ -19,6 +26,10 @@ function distance(a, b) {
 }
 
 export function createMapView(settlements, settings, callbacks) {
+  destroyMapView();
+  const controller = new AbortController();
+  activeMap = controller;
+  const { signal } = controller;
   const stage = h('div', { class: 'map-stage' });
   const img = h('img', {
     class: 'map-image',
@@ -158,6 +169,7 @@ export function createMapView(settlements, settings, callbacks) {
     h('button', { type: 'button', class: 'map-menu-item' }, '+ Добавить поселение')
   );
   document.body.append(menu);
+  signal.addEventListener('abort', () => menu.remove());
 
   function closeMenu() {
     menu.hidden = true;
@@ -266,7 +278,7 @@ export function createMapView(settlements, settings, callbacks) {
       clampPan();
       applyTransform();
     }
-  });
+  }, { signal });
 
   function endPointer(event) {
     if (!state.pointers.delete(event.pointerId)) return;
@@ -284,8 +296,8 @@ export function createMapView(settlements, settings, callbacks) {
     }
   }
 
-  window.addEventListener('pointerup', endPointer);
-  window.addEventListener('pointercancel', endPointer);
+  window.addEventListener('pointerup', endPointer, { signal });
+  window.addEventListener('pointercancel', endPointer, { signal });
 
   viewport.addEventListener('contextmenu', (event) => {
     event.preventDefault();
@@ -295,11 +307,11 @@ export function createMapView(settlements, settings, callbacks) {
   document.addEventListener('pointerdown', (event) => {
     if (menu.hidden) return;
     if (!menu.contains(event.target)) closeMenu();
-  });
+  }, { signal });
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') closeMenu();
-  });
+  }, { signal });
 
   requestAnimationFrame(() => {
     clampPan();

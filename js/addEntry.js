@@ -551,7 +551,7 @@ formEl?.addEventListener('submit', async (e) => {
     } catch (relationError) {
       console.error(relationError);
       editing = { id: data[0].id, table: config.table, raw: data[0] };
-      document.dispatchEvent(new CustomEvent('data:updated'));
+      document.dispatchEvent(new CustomEvent('data:updated', { detail: { table: config.table } }));
       showMessage('Запись сохранена, но отношения не сохранились: ' + (relationError.message || relationError), 'is-error');
       return;
     }
@@ -560,7 +560,7 @@ formEl?.addEventListener('submit', async (e) => {
 
     setTimeout(() => {
       closeForm();
-      document.dispatchEvent(new CustomEvent('data:updated'));
+      document.dispatchEvent(new CustomEvent('data:updated', { detail: { table: config.table } }));
     }, 800);
   } catch (err) {
     console.error(err);

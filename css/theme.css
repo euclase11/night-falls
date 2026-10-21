@@ -1405,3 +1405,183 @@ body[data-world="afterlife"] .help {
     color: var(--accent-text, var(--accent));
     font-size: 1.15rem;
 }
+
+body[data-world="real"] button.icon-btn.fav-btn[aria-pressed="true"] {
+  border-color: #e8685f;
+  background: color-mix(in srgb, #e8685f 16%, var(--surface));
+  color: #ff9a85;
+}
+
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 8, 10, 0.74);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+body[data-world="afterlife"] .loader {
+  background: rgba(58, 22, 38, 0.46);
+}
+
+.loader.is-visible {
+  opacity: 1;
+}
+
+.loader-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  text-align: center;
+}
+
+.loader-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 9rem;
+  height: 6.75rem;
+}
+
+.loader-art svg {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.loader-text {
+  max-width: 16rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+}
+
+body[data-world="afterlife"] .loader-text {
+  color: #fbeff3;
+  text-shadow: 0 1px 6px rgba(58, 22, 38, 0.6);
+}
+
+.ld-rails {
+  display: none;
+}
+
+body[data-world="afterlife"] .ld-rails {
+  display: block;
+}
+
+body[data-world="afterlife"] .ld-gears,
+body[data-world="afterlife"] .ld-glow {
+  display: none;
+}
+
+.ld-glow {
+  position: absolute;
+  inset: -25%;
+  background: radial-gradient(ellipse at 50% 55%, rgba(200, 45, 62, 0.45), transparent 65%);
+  animation: ld-furnace 2.8s ease-in-out infinite;
+}
+
+.ld-gears {
+  fill: none;
+  stroke: var(--accent-text, var(--accent));
+}
+
+.ld-teeth {
+  stroke-width: 5;
+}
+
+.ld-rim {
+  stroke-width: 1.6;
+}
+
+.ld-spoke {
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+.ld-hub {
+  fill: #e8685f;
+  stroke: none;
+}
+
+.ld-gear {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ld-spin 6s linear infinite;
+}
+
+.ld-gear-b {
+  animation-duration: 4s;
+  animation-direction: reverse;
+}
+
+.ld-rails {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.ld-rail {
+  stroke: url(#ld-rail-grad);
+  stroke-width: 1.8;
+}
+
+.ld-tie {
+  stroke: rgba(248, 239, 224, 0.85);
+  stroke-width: 1.4;
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: ld-tie 1.8s cubic-bezier(0.55, 0, 1, 0.7) infinite;
+  animation-delay: calc(var(--i) * -0.3s);
+}
+
+.ld-lamp {
+  fill: #fbf3e3;
+  stroke: none;
+  filter: drop-shadow(0 0 4px rgba(250, 238, 214, 0.95));
+  animation: ld-lamp 3.2s ease-in-out infinite;
+}
+
+@keyframes ld-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ld-furnace {
+  0%, 100% { opacity: 1; }
+  20% { opacity: 0.7; }
+  40% { opacity: 1; }
+  60% { opacity: 0.8; }
+  80% { opacity: 0.95; }
+}
+
+@keyframes ld-tie {
+  0% { transform: translateY(0) scaleX(0.09); opacity: 0; }
+  12% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(34px) scaleX(1); opacity: 0; }
+}
+
+@keyframes ld-lamp {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ld-gear,
+  .ld-glow,
+  .ld-lamp {
+    animation: none;
+  }
+
+  .ld-tie {
+    display: none;
+  }
+}

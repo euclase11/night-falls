@@ -36,7 +36,9 @@ export function invalidateCache(table) {
     const key = TABLE_TO_CACHE[table];
     if (key) cache[key] = null;
   } else {
-    for (const key of Object.keys(cache)) cache[key] = null;
+    for (const key of Object.keys(cache)) {
+      if (key !== 'favorites') cache[key] = null;
+    }
   }
 }
 
