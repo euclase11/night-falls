@@ -21,6 +21,8 @@ const NOTE_H = 260;
 const NOTE_MAX_W = 288;
 const GAP = 24;
 const EDGE_PAD = 40;
+const CANVAS_W = 1600;
+const CANVAS_H = 1100;
 const LONG_PRESS_MS = 550;
 const MOVE_CANCEL = 10;
 const DRAG_THRESHOLD = 5;
@@ -243,8 +245,11 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     canvas.style.position = 'absolute';
     canvas.style.top = '0';
     canvas.style.left = '0';
+    canvas.style.width = `${CANVAS_W}px`;
+    canvas.style.height = `${CANVAS_H}px`;
     canvas.style.transformOrigin = '0 0';
     canvas.style.willChange = 'transform';
+    canvas.style.touchAction = 'pan-x pan-y';
 
     const zoomBox = h('div', { class: 'board-zoom' }, canvas);
     zoomBox.style.position = 'relative';
@@ -347,8 +352,8 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     }
 
     function bounds() {
-        const halfW = Math.max(canvas.clientWidth, 1600) / 2;
-        const halfH = Math.max(canvas.clientHeight, 1100) / 2;
+        const halfW = CANVAS_W / 2;
+        const halfH = CANVAS_H / 2;
         return {
             minX: -halfW + NOTE_MAX_W / 2 + EDGE_PAD,
             maxX: halfW - NOTE_MAX_W / 2 - EDGE_PAD,
@@ -851,8 +856,8 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     );
 
     function syncViewBox() {
-        const width = canvas.clientWidth;
-        const height = canvas.clientHeight;
+        const width = CANVAS_W;
+        const height = CANVAS_H;
         threads.setAttribute('viewBox', `${-width / 2} ${-height / 2} ${width} ${height}`);
     }
 
@@ -865,20 +870,18 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     }
 
     function applyZoom() {
-        const width = Math.max(1600, Math.ceil(scroll.clientWidth / zoom));
-        const height = Math.max(1100, Math.ceil(scroll.clientHeight / zoom));
-        canvas.style.width = `${width}px`;
-        canvas.style.height = `${height}px`;
+        canvas.style.width = `${CANVAS_W}px`;
+        canvas.style.height = `${CANVAS_H}px`;
         canvas.style.transform = `scale(${zoom})`;
-        zoomBox.style.width = `${Math.round(width * zoom)}px`;
-        zoomBox.style.height = `${Math.round(height * zoom)}px`;
+        zoomBox.style.width = `${Math.round(CANVAS_W * zoom)}px`;
+        zoomBox.style.height = `${Math.round(CANVAS_H * zoom)}px`;
     }
 
     function canvasPoint(clientX, clientY) {
         const rect = canvas.getBoundingClientRect();
         return {
-            x: (clientX - rect.left) / zoom - canvas.clientWidth / 2,
-            y: (clientY - rect.top) / zoom - canvas.clientHeight / 2,
+            x: (clientX - rect.left) / zoom - CANVAS_W / 2,
+            y: (clientY - rect.top) / zoom - CANVAS_H / 2,
         };
     }
 
@@ -891,8 +894,8 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         const anchor = canvasPoint(originX, originY);
         zoom = target;
         applyZoom();
-        scroll.scrollLeft = (canvas.clientWidth / 2 + anchor.x) * zoom - (originX - view.left);
-        scroll.scrollTop = (canvas.clientHeight / 2 + anchor.y) * zoom - (originY - view.top);
+        scroll.scrollLeft = (CANVAS_W / 2 + anchor.x) * zoom - (originX - view.left);
+        scroll.scrollTop = (CANVAS_H / 2 + anchor.y) * zoom - (originY - view.top);
         closeMenu();
         try {
             localStorage.setItem('boardZoom', String(zoom));
@@ -913,8 +916,8 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
 
     function centerView() {
         const root = graph ? graph.nodes.get(graph.root) : null;
-        const targetX = (canvas.clientWidth / 2 + (root ? root.x : 0)) * zoom;
-        const targetY = (canvas.clientHeight / 2 + (root ? root.y + NOTE_H / 2 : 0)) * zoom;
+        const targetX = (CANVAS_W / 2 + (root ? root.x : 0)) * zoom;
+        const targetY = (CANVAS_H / 2 + (root ? root.y + NOTE_H / 2 : 0)) * zoom;
         scroll.scrollLeft = targetX - scroll.clientWidth / 2;
         scroll.scrollTop = targetY - scroll.clientHeight / 2;
     }
