@@ -5,9 +5,20 @@ import { fuzzyRank } from './fuzzy.js';
 import { fetchAllRelations } from './relations.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+
+const TYPE_ICONS = {
+    characters: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-7 8-7s8 3 8 7"/></svg>',
+    settlements: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c-3-4.5-6-7.5-6-12a6 6 0 0 1 12 0c0 4.5-3 7.5-6 12z"/><circle cx="12" cy="10" r="2.2"/></svg>',
+    events: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18M8 15h2M14 15h2M8 18h2M14 18h2"/></svg>',
+    misc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M9 13h6M9 17h4"/></svg>',
+    gallery: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.6"/><path d="m21 15-4.5-4.5L6 21"/></svg>',
+};
+
+const BLANK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>';
+
 const STORAGE_PREFIX = 'board:';
-const NOTE_W = 190;
-const NOTE_H = 260;
+const NOTE_W = 250;
+const NOTE_H = 280;
 const GAP = 24;
 const LONG_PRESS_MS = 550;
 const MOVE_CANCEL = 10;
@@ -193,7 +204,6 @@ export function createBoardView({ all, world, userId }, callbacks) {
     let toastTimer = null;
     let relationsMap = null;
 
-    // Preload character relations in background; awaited on first explore
     const relationsReady = fetchAllRelations()
         .then((rows) => {
             const map = new Map();
@@ -238,7 +248,6 @@ export function createBoardView({ all, world, userId }, callbacks) {
             const itemKey = `${item.table}:${item.id}`;
             if (itemKey !== key && (item.links ?? []).includes(key)) result.add(itemKey);
         }
-        // Character relationships from the separate relations table
         if (relationsMap?.has(key)) {
             for (const relKey of relationsMap.get(key)) {
                 if (relKey !== key && byKey.has(relKey)) result.add(relKey);
@@ -264,6 +273,11 @@ export function createBoardView({ all, world, userId }, callbacks) {
             edges,
             explored: new Set(saved.explored.filter((key) => nodes.has(key))),
         };
+        for (const key of nodes.keys()) {
+            for (const neighbor of neighborKeys(key)) {
+                if (nodes.has(neighbor)) result.edges.add(edgeKey(key, neighbor));
+            }
+        }
         pruneUnreachable(result);
         return result;
     }
@@ -318,7 +332,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
         const spread = keys.length > 1 ? (isFull ? Math.PI * 2 : Math.PI * 1.4) : 0;
         const placed = [...graph.nodes.values()];
 
-        const radii = [300, 360, 430, 510, 600, 700, 820];
+        const radii = [320, 380, 450, 530, 620, 720, 840];
         const turns = [0, 0.18, -0.18, 0.35, -0.35, 0.52, -0.52, 0.7, -0.7, 0.88, -0.88, 1.05, -1.05];
 
         keys.forEach((key, index) => {
@@ -343,8 +357,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
             }
 
             if (!spot) {
-                // Wide sweep as last resort before giving up
-                for (let radius = 280; radius < 1000 && !spot; radius += 50) {
+                for (let radius = 300; radius < 1100 && !spot; radius += 50) {
                     for (let step = 0; step < 24 && !spot; step++) {
                         const angle = (step / 24) * Math.PI * 2;
                         const candidate = clampPoint({
@@ -358,8 +371,8 @@ export function createBoardView({ all, world, userId }, callbacks) {
 
             if (!spot) {
                 spot = clampPoint({
-                    x: parent.x + Math.cos(idealAngle) * 340,
-                    y: parent.y + Math.sin(idealAngle) * 340,
+                    x: parent.x + Math.cos(idealAngle) * 360,
+                    y: parent.y + Math.sin(idealAngle) * 360,
                 });
             }
 
@@ -433,6 +446,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
             class: 'board-note-media is-icon',
             'data-table': entry.table,
             'aria-hidden': 'true',
+            innerHTML: TYPE_ICONS[entry.table] ?? TYPE_ICONS.misc,
         });
     }
 
@@ -572,7 +586,11 @@ export function createBoardView({ all, world, userId }, callbacks) {
                 style: `left: calc(50% + ${blank.x}px); top: calc(50% + ${blank.y}px); --tilt: -1.5deg;`,
             },
             h('span', { class: 'board-pin' }),
-            h('span', { class: 'board-blank-icon', 'aria-hidden': 'true' }),
+            h('span', {
+                class: 'board-blank-icon',
+                'aria-hidden': 'true',
+                innerHTML: BLANK_ICON_SVG,
+            }),
             h('p', { class: 'board-blank-caption' }, 'С чего начать'),
             h(
                 'button',
@@ -698,7 +716,6 @@ export function createBoardView({ all, world, userId }, callbacks) {
     });
 
     canvas.addEventListener('pointerdown', (event) => {
-        // Notes handle their own pointer interaction
         if (event.target.closest('.board-note')) return;
         state.longPressed = false;
         if (event.pointerType !== 'touch') return;
@@ -769,13 +786,15 @@ export function createBoardView({ all, world, userId }, callbacks) {
     signal.addEventListener('abort', () => observer.disconnect());
     window.addEventListener('resize', fit, { signal });
 
-    graph = hydrate(readSaved(scope));
-    draw();
-
-    requestAnimationFrame(() => {
-        fit();
-        syncViewBox();
-        centerView();
+    relationsReady.then(() => {
+        if (signal.aborted) return;
+        graph = hydrate(readSaved(scope));
+        draw();
+        requestAnimationFrame(() => {
+            fit();
+            syncViewBox();
+            centerView();
+        });
     });
 
     return board;

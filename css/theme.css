@@ -6,14 +6,6 @@
     font-display: swap;
 }
 
-@font-face {
-    font-family: "Font Awesome Board";
-    font-weight: 900;
-    font-style: normal;
-    font-display: swap;
-    src: url("https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/webfonts/fa-solid-900.woff2") format("woff2");
-}
-
 .icon {
     display: inline-block;
     font-family: "Symbols Nerd Font", sans-serif;
@@ -1456,7 +1448,9 @@ body[data-world="real"] .board::after {
 
 .board-note {
     position: absolute;
-    width: 10.5rem;
+    width: auto;
+    min-width: 11rem;
+    max-width: 15rem;
     padding: 1.1rem 0.75rem 0.8rem;
     border-radius: 2px;
     background-color: var(--paper-a);
@@ -1520,7 +1514,10 @@ body[data-world="afterlife"] .board-note.is-dragging {
     box-shadow: 0 0 0 3px var(--paper-accent), 0 6px 14px rgba(0, 0, 0, 0.4);
 }
 
-.board-note.is-root { width: 11.5rem; }
+.board-note.is-root {
+    min-width: 12rem;
+    max-width: 16rem;
+}
 
 .board-pin {
     position: absolute;
@@ -1561,24 +1558,28 @@ body[data-world="afterlife"] .board-note.is-dragging {
 }
 
 .board-note-media.is-icon {
-    color: var(--paper-accent);
-    opacity: 0.75;
+    display: grid;
+    place-items: center;
+    color: var(--type-color, var(--paper-accent));
 }
 
-.board-note-media.is-icon::before {
+.board-note-media.is-icon svg {
     display: block;
-    font-family: "Font Awesome Board", sans-serif;
-    font-style: normal;
-    font-weight: 900;
-    font-size: 2.6rem;
-    line-height: 1;
+    width: 2.6rem;
+    height: 2.6rem;
 }
 
-.board-note-media.is-icon[data-table="characters"]::before { content: "\f007"; }
-.board-note-media.is-icon[data-table="settlements"]::before { content: "\f041"; }
-.board-note-media.is-icon[data-table="events"]::before { content: "\f073"; }
-.board-note-media.is-icon[data-table="misc"]::before { content: "\f15c"; }
-.board-note-media.is-icon[data-table="gallery"]::before { content: "\f03e"; }
+body[data-world="real"] .board-note-media.is-icon[data-table="characters"] { --type-color: #7fa565; }
+body[data-world="real"] .board-note-media.is-icon[data-table="settlements"] { --type-color: #d47a2a; }
+body[data-world="real"] .board-note-media.is-icon[data-table="events"] { --type-color: #c04a5a; }
+body[data-world="real"] .board-note-media.is-icon[data-table="misc"] { --type-color: #8a9aa8; }
+body[data-world="real"] .board-note-media.is-icon[data-table="gallery"] { --type-color: #c48a6a; }
+
+body[data-world="afterlife"] .board-note-media.is-icon[data-table="characters"] { --type-color: #4a8c5a; }
+body[data-world="afterlife"] .board-note-media.is-icon[data-table="settlements"] { --type-color: #b8783a; }
+body[data-world="afterlife"] .board-note-media.is-icon[data-table="events"] { --type-color: #8c2f4f; }
+body[data-world="afterlife"] .board-note-media.is-icon[data-table="misc"] { --type-color: #6a5a8a; }
+body[data-world="afterlife"] .board-note-media.is-icon[data-table="gallery"] { --type-color: #a04a6a; }
 
 .board-note-kind {
     display: block;
@@ -1586,6 +1587,7 @@ body[data-world="afterlife"] .board-note.is-dragging {
     font-size: 0.68rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    overflow-wrap: break-word;
 }
 
 .board-note h3 {
@@ -1614,6 +1616,7 @@ body[data-world="afterlife"] .board-note.is-dragging {
     flex-direction: column;
     align-items: center;
     gap: 0.55rem;
+    width: 11rem;
     min-height: 9rem;
     padding: 1.7rem 0.75rem 1.1rem;
     cursor: default;
@@ -1643,21 +1646,26 @@ body[data-world="afterlife"] .board-note.is-blank {
 }
 
 .board-blank-icon {
-    font-family: "Font Awesome Board", sans-serif;
-    font-weight: 900;
-    line-height: 1;
+    display: grid;
+    place-items: center;
+    width: 1.7rem;
+    height: 1.7rem;
     color: var(--paper-accent);
 }
 
-.board-blank-icon::before { content: "\f14e"; }
+.board-blank-icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
 
 body[data-world="real"] .board-blank-icon {
-    font-size: 1.7rem;
     opacity: 0.55;
 }
 
 body[data-world="afterlife"] .board-blank-icon {
-    font-size: 1.9rem;
+    width: 1.9rem;
+    height: 1.9rem;
     opacity: 0.85;
     filter: drop-shadow(0 0 6px rgba(255, 200, 150, 0.7));
 }
@@ -1756,8 +1764,9 @@ body[data-world="afterlife"] .board-explore:hover {
 .board-picker-toggle input { accent-color: var(--accent); }
 
 @media (max-width: 40rem) {
-    .board-note { width: 9.5rem; }
-    .board-note.is-root { width: 10.5rem; }
+    .board-note { min-width: 9.5rem; max-width: 12rem; }
+    .board-note.is-root { min-width: 10.5rem; max-width: 13rem; }
+    .board-note.is-blank { width: 9.5rem; }
     body[data-tab="board"] main { padding-bottom: 0; }
     body[data-world] .tabs button {
         padding-inline: 0.1rem;
