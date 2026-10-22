@@ -2,7 +2,6 @@ import { h } from './util.js';
 import { refLabel } from './store.js';
 import { plainText } from './richtext.js';
 import { fuzzyRank } from './fuzzy.js';
-import { fetchAllRelations } from './relations.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -26,6 +25,8 @@ const LONG_PRESS_MS = 550;
 const MOVE_CANCEL = 10;
 const DRAG_THRESHOLD = 5;
 const WORLD_LABELS = { real: 'реальный мир', afterlife: 'посмертие' };
+const MIN_ZOOM = 0.3;
+const MAX_ZOOM = 1.6;
 
 let activeBoard = null;
 let pendingRedrawFrame = 0;
@@ -134,39 +135,33 @@ function openPicker({ all, world, onPick }) {
     );
     const overlay = h('div', { class: 'rt-search', role: 'dialog', 'aria-modal': 'true' }, card);
 
+    const noteEls = new Map();
+
     function draw() {
-        const pool = all
-            .filter((entry) => otherWorld.checked || !entry.world || entry.world === world)
-            .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-        const query = input.value.trim();
-        const rows = query ? fuzzyRank(pool, query, (entry) => entry.name, 60) : pool;
-        if (!rows.length) {
-            list.replaceChildren(h('li', { class: 'links-hint' }, 'Ничего не найдено'));
-            return;
+        const wanted = graph ? new Set(graph.nodes.keys()) : new Set();
+        for (const [key, el] of noteEls) {
+            if (!wanted.has(key)) {
+                el.remove();
+                noteEls.delete(key);
+            }
         }
-        list.replaceChildren(
-            ...rows.map((entry) =>
-                h(
-                    'li',
-                    {},
-                    h(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: () => {
-                                close();
-                                onPick(entry);
-                            },
-                        },
-                        h('span', { class: 'related-kind' }, refLabel(entry)),
-                        h('span', { class: 'related-name' }, entry.name),
-                        entry.world && entry.world !== world
-                            ? h('span', { class: 'rt-world' }, WORLD_LABELS[entry.world] ?? entry.world)
-                            : null
-                    )
-                )
-            )
-        );
+        if (graph) {
+            for (const node of graph.nodes.values()) {
+                let el = noteEls.get(node.key);
+                if (!el) {
+                    el = buildNote(node);
+                    if (!el) continue;
+                    noteEls.set(node.key, el);
+                    canvas.append(el);
+                }
+                el.style.left = `calc(50% + ${node.x}px)`;
+                el.style.top = `calc(50% + ${node.y}px)`;
+            }
+        }
+        canvas.querySelector('.board-note.is-blank')?.remove();
+        redrawThreads();
+        if (blank) canvas.append(buildBlank());
+        emptyHint.hidden = Boolean(graph || blank);
     }
 
     function onKey(event) {
@@ -198,7 +193,7 @@ function openPicker({ all, world, onPick }) {
     input.focus();
 }
 
-export function createBoardView({ all, world, userId }, callbacks) {
+export function createBoardView({ all, world, userId, relations }, callbacks) {
     destroyBoardView();
     const controller = new AbortController();
     activeBoard = controller;
@@ -217,35 +212,51 @@ export function createBoardView({ all, world, userId }, callbacks) {
     }
 
     const state = { pressTimer: null, pressX: 0, pressY: 0, longPressed: false, suppressClick: false };
+    let zoom = 1;
+    try {
+        const savedZoom = Number(localStorage.getItem('boardZoom'));
+        if (savedZoom >= MIN_ZOOM && savedZoom <= MAX_ZOOM) zoom = savedZoom;
+    } catch {
+        zoom = 1;
+    }
     let graph = null;
     let blank = null;
     let toastTimer = null;
-    let relationsMap = null;
-
-    const relationsReady = fetchAllRelations()
-        .then((rows) => {
-            const map = new Map();
-            for (const rel of rows) {
-                const a = `characters:${rel.from_id}`;
-                const b = `characters:${rel.to_id}`;
-                if (!map.has(a)) map.set(a, new Set());
-                if (!map.has(b)) map.set(b, new Set());
-                map.get(a).add(b);
-                map.get(b).add(a);
-            }
-            relationsMap = map;
-        })
-        .catch((error) => {
-            console.error('Failed to load character relations:', error);
-            relationsMap = new Map();
-        });
+    const relationsMap = new Map();
+    for (const rel of relations ?? []) {
+        const a = `characters:${rel.from_id}`;
+        const b = `characters:${rel.to_id}`;
+        if (!relationsMap.has(a)) relationsMap.set(a, new Set());
+        if (!relationsMap.has(b)) relationsMap.set(b, new Set());
+        relationsMap.get(a).add(b);
+        relationsMap.get(b).add(a);
+    }
 
     const threads = svgEl('svg', { class: 'board-threads', preserveAspectRatio: 'none', 'aria-hidden': 'true' });
     const canvas = h('div', { class: 'board-canvas' }, threads);
-    const scroll = h('div', { class: 'board-scroll' }, canvas);
+    const zoomBox = h('div', { class: 'board-zoom' }, canvas);
+    const scroll = h('div', { class: 'board-scroll' }, zoomBox);
     const emptyHint = h('p', { class: 'board-empty' }, 'Нажмите на доску, чтобы начать исследование');
     const toastEl = h('div', { class: 'board-toast', role: 'status' });
-    const board = h('div', { class: 'board' }, scroll, emptyHint, toastEl);
+    const zoomControls = h(
+        'div',
+        { class: 'map-zoom' },
+        h('button', { type: 'button', 'aria-label': 'Приблизить', onClick: () => setZoom(zoom * 1.2) }, '+'),
+        h('button', { type: 'button', 'aria-label': 'Отдалить', onClick: () => setZoom(zoom / 1.2) }, '−'),
+        h(
+            'button',
+            {
+                type: 'button',
+                'aria-label': 'Сбросить масштаб',
+                onClick: () => {
+                    setZoom(1);
+                    centerView();
+                },
+            },
+            '⟲'
+        )
+    );
+    const board = h('div', { class: 'board' }, scroll, zoomControls, emptyHint, toastEl);
     const menu = h('div', { class: 'map-menu board-menu', hidden: true });
     document.body.append(menu);
 
@@ -422,14 +433,12 @@ export function createBoardView({ all, world, userId }, callbacks) {
     function autofill() {
         if (!graph) return false;
         let added = false;
-        for (const key of [...graph.nodes.keys()]) {
+        for (const key of [...graph.explored]) {
             const node = graph.nodes.get(key);
             if (!node) continue;
-            const neighbors = neighborKeys(key);
-            const fresh = neighbors.filter((n) => !graph.nodes.has(n) && !graph.removed.has(n));
+            const fresh = neighborKeys(key).filter((n) => !graph.nodes.has(n) && !graph.removed.has(n));
             if (fresh.length) {
                 placeAround(node, fresh);
-                for (const n of fresh) graph.removed.delete(n);
                 added = true;
             }
         }
@@ -437,10 +446,9 @@ export function createBoardView({ all, world, userId }, callbacks) {
         return added;
     }
 
-    async function explore(key) {
+    function explore(key) {
         const parent = graph?.nodes.get(key);
         if (!parent) return;
-        await relationsReady;
         const neighbors = neighborKeys(key);
         for (const n of neighbors) graph.removed.delete(n);
         placeAround(parent, neighbors.filter((item) => !graph.nodes.has(item)));
@@ -532,8 +540,8 @@ export function createBoardView({ all, world, userId }, callbacks) {
             }
 
             const next = {
-                x: event.clientX - drag.canvasRect.left - drag.canvasRect.width / 2 - drag.offsetX,
-                y: event.clientY - drag.canvasRect.top - drag.canvasRect.height / 2 - drag.offsetY,
+                x: (event.clientX - drag.canvasRect.left - drag.canvasRect.width / 2 - drag.offsetX) / zoom,
+                y: (event.clientY - drag.canvasRect.top - drag.canvasRect.height / 2 - drag.offsetY) / zoom,
             };
             const clamped = clampWithBounds(next, drag.limit);
             node.x = clamped.x;
@@ -749,8 +757,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
     }
 
     function pointFromEvent(event) {
-        const rect = canvas.getBoundingClientRect();
-        return { x: event.clientX - rect.left - rect.width / 2, y: event.clientY - rect.top - rect.height / 2 };
+        return canvasPoint(event.clientX, event.clientY);
     }
 
     function clearPress() {
@@ -840,12 +847,60 @@ export function createBoardView({ all, world, userId }, callbacks) {
         const tabs = document.getElementById('tabs');
         const reserved = tabs && getComputedStyle(tabs).position === 'fixed' ? tabs.offsetHeight : 0;
         board.style.height = `${Math.max(360, window.innerHeight - top - reserved - 12)}px`;
+        applyZoom();
     }
+
+    function applyZoom() {
+        const width = Math.max(1600, Math.ceil(scroll.clientWidth / zoom));
+        const height = Math.max(1100, Math.ceil(scroll.clientHeight / zoom));
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        canvas.style.transform = `scale(${zoom})`;
+        zoomBox.style.width = `${Math.round(width * zoom)}px`;
+        zoomBox.style.height = `${Math.round(height * zoom)}px`;
+    }
+
+    function canvasPoint(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: (clientX - rect.left) / zoom - canvas.clientWidth / 2,
+            y: (clientY - rect.top) / zoom - canvas.clientHeight / 2,
+        };
+    }
+
+    function setZoom(next, clientX, clientY) {
+        const target = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
+        if (Math.abs(target - zoom) < 0.001) return;
+        const view = scroll.getBoundingClientRect();
+        const originX = clientX ?? view.left + view.width / 2;
+        const originY = clientY ?? view.top + view.height / 2;
+        const anchor = canvasPoint(originX, originY);
+        zoom = target;
+        applyZoom();
+        scroll.scrollLeft = (canvas.clientWidth / 2 + anchor.x) * zoom - (originX - view.left);
+        scroll.scrollTop = (canvas.clientHeight / 2 + anchor.y) * zoom - (originY - view.top);
+        closeMenu();
+        try {
+            localStorage.setItem('boardZoom', String(zoom));
+        } catch {
+            return;
+        }
+    }
+
+    scroll.addEventListener(
+        'wheel',
+        (event) => {
+            if (!event.ctrlKey) return;
+            event.preventDefault();
+            setZoom(zoom * (event.deltaY < 0 ? 1.1 : 1 / 1.1), event.clientX, event.clientY);
+        },
+        { passive: false }
+    );
 
     function centerView() {
         const root = graph ? graph.nodes.get(graph.root) : null;
-        const targetX = canvas.clientWidth / 2 + (root ? root.x : 0);
-        const targetY = canvas.clientHeight / 2 + (root ? root.y + NOTE_H / 2 : 0);
+        const targetX = (canvas.clientWidth / 2 + (root ? root.x : 0)) * zoom;
+        const targetY = (canvas.clientHeight / 2 + (root ? root.y + NOTE_H / 2 : 0)) * zoom;
         scroll.scrollLeft = targetX - scroll.clientWidth / 2;
         scroll.scrollTop = targetY - scroll.clientHeight / 2;
     }
@@ -856,23 +911,16 @@ export function createBoardView({ all, world, userId }, callbacks) {
     window.addEventListener('resize', fit, { signal });
 
     graph = hydrate(readSaved(scope));
+    if (graph) {
+        autofill();
+        recomputeEdges();
+        persist();
+    }
     draw();
     requestAnimationFrame(() => {
         fit();
         syncViewBox();
         centerView();
-    });
-
-    relationsReady.then(() => {
-        if (signal.aborted || !graph) return;
-        const added = autofill();
-        if (added) {
-            draw();
-        } else {
-            recomputeEdges();
-            redrawThreads();
-        }
-        persist();
     });
 
     return board;

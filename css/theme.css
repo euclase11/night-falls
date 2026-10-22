@@ -1874,3 +1874,36 @@ body[data-world="afterlife"] .board-menu .map-menu-item.tone-warning { border-le
 body[data-world="afterlife"] .board-menu .map-menu-item.tone-explore:hover { background: rgba(212, 112, 138, 0.16); }
 body[data-world="afterlife"] .board-menu .map-menu-item.tone-danger:hover { background: rgba(196, 80, 104, 0.16); }
 body[data-world="afterlife"] .board-menu .map-menu-item.tone-warning:hover { background: rgba(168, 144, 200, 0.16); }
+
+body[data-tab="board"] .atmosphere {
+  display: none;
+}
+
+.board-canvas.is-dragging .board-note:not(.is-dragging) {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .board::before {
+    box-shadow: inset 0 0 0 2px var(--board-frame-line);
+  }
+
+  .board-note {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.board-zoom {
+  position: relative;
+}
+
+.board-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1600px;
+  height: 1100px;
+  min-width: 0;
+  min-height: 0;
+  transform-origin: 0 0;
+}
