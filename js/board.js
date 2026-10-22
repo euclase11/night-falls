@@ -30,15 +30,11 @@ const DRAG_THRESHOLD = 5;
 const WORLD_LABELS = { real: 'реальный мир', afterlife: 'посмертие' };
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 1.6;
+const FIT_HEIGHT_TOLERANCE = 150;
 
 let activeBoard = null;
-let pendingRedrawFrame = 0;
 
 export function destroyBoardView() {
-    if (pendingRedrawFrame) {
-        cancelAnimationFrame(pendingRedrawFrame);
-        pendingRedrawFrame = 0;
-    }
     activeBoard?.abort();
     activeBoard = null;
 }
@@ -212,6 +208,11 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     const scope = `${userId ?? 'guest'}:${world}`;
     const byKey = new Map(all.map((entry) => [`${entry.table}:${entry.id}`, entry]));
 
+    // Лёгкий режим для телефонов: одна нить вместо трёх (тень и блик там почти не видны)
+    const lite = window.matchMedia('(max-width: 40rem) and (pointer: coarse)').matches;
+    // Перетаскивание через свойство translate (без layout). Если не поддерживается — через left/top.
+    const hasTranslate = typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('translate', '1px 1px');
+
     const backlinks = new Map();
     for (const item of all) {
         const itemKey = `${item.table}:${item.id}`;
@@ -222,7 +223,6 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     }
 
     const state = { pressTimer: null, pressX: 0, pressY: 0, longPressed: false, suppressClick: false };
-    let draggingKey = null;
     let zoom = 1;
     try {
         const savedZoom = Number(localStorage.getItem('boardZoom'));
@@ -233,6 +233,11 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     let graph = null;
     let blank = null;
     let toastTimer = null;
+    let fitFrame = 0;
+    let lastBoardHeight = 0;
+    let lastBoardWidth = 0;
+    let applied = { w: 0, h: 0, zoom: 0 };
+    let edgeEls = new Map();
     const relationsMap = new Map();
     for (const rel of relations ?? []) {
         const a = `characters:${rel.from_id}`;
@@ -244,6 +249,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     }
 
     const threads = svgEl('svg', { class: 'board-threads', preserveAspectRatio: 'none', 'aria-hidden': 'true' });
+    threads.style.willChange = 'transform';
     const canvas = h('div', { class: 'board-canvas' }, threads);
     canvas.style.position = 'absolute';
     canvas.style.top = '0';
@@ -285,6 +291,8 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         menu.remove();
         clearTimeout(toastTimer);
         clearTimeout(state.pressTimer);
+        if (fitFrame) cancelAnimationFrame(fitFrame);
+        fitFrame = 0;
     });
 
     function neighborKeys(key) {
@@ -367,8 +375,8 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         const vw = scroll.clientWidth || 400;
         const vh = scroll.clientHeight || 600;
         const w = Math.max(Math.ceil(vw / zoom), Math.ceil(maxX) + EDGE_PAD);
-        const h = Math.max(Math.ceil(vh / zoom), Math.ceil(maxY) + EDGE_PAD);
-        return { w, h };
+        const height = Math.max(Math.ceil(vh / zoom), Math.ceil(maxY) + EDGE_PAD);
+        return { w, h: height };
     }
 
     function bounds() {
@@ -548,6 +556,54 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         return media;
     }
 
+    /* ---------- Нити ---------- */
+
+    function rebuildThreads() {
+        edgeEls = new Map();
+        if (!graph) {
+            if (threads.childNodes.length) threads.replaceChildren();
+            return;
+        }
+        const fragment = document.createDocumentFragment();
+        for (const edge of graph.edges) {
+            const [fromKey, toKey] = edge.split('|');
+            const from = graph.nodes.get(fromKey);
+            const to = graph.nodes.get(toKey);
+            if (!from || !to) continue;
+            const d = threadPath(from, to);
+            const paths = lite
+                ? [svgEl('path', { class: 'board-thread', d })]
+                : [
+                    svgEl('path', { class: 'board-thread-shadow', transform: 'translate(2 3)', d }),
+                    svgEl('path', { class: 'board-thread', d }),
+                    svgEl('path', { class: 'board-thread-hi', d }),
+                ];
+            fragment.append(...paths);
+            edgeEls.set(edge, { a: fromKey, b: toKey, paths });
+        }
+        threads.replaceChildren(fragment);
+    }
+
+    function edgesOf(key) {
+        const result = [];
+        for (const item of edgeEls.values()) {
+            if (item.a === key || item.b === key) result.push(item);
+        }
+        return result;
+    }
+
+    function updateEdges(list) {
+        for (const item of list) {
+            const from = graph.nodes.get(item.a);
+            const to = graph.nodes.get(item.b);
+            if (!from || !to) continue;
+            const d = threadPath(from, to);
+            for (const path of item.paths) path.setAttribute('d', d);
+        }
+    }
+
+    /* ---------- Перетаскивание ---------- */
+
     function setupDrag(noteEl, node) {
         let pressTimer = null;
         let drag = null;
@@ -560,19 +616,37 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
             window.removeEventListener('pointercancel', onCancel);
         };
 
+        function showAt(x, y) {
+            if (hasTranslate) {
+                noteEl.style.translate = `${x - drag.originalX}px ${y - drag.originalY}px`;
+            } else {
+                noteEl.style.left = `${x}px`;
+                noteEl.style.top = `${y}px`;
+            }
+        }
+
         function applyMove() {
-            if (!drag || !drag.active) return;
+            if (!drag) return;
             drag.rafPending = false;
-            const next = {
-                x: (drag.lastX - drag.canvasRect.left) / zoom,
-                y: (drag.lastY - drag.canvasRect.top) / zoom,
-            };
-            const clamped = clampWithBounds(next, drag.limit);
+            if (!drag.active) return;
+            const clamped = clampWithBounds(
+                {
+                    x: drag.originalX + (drag.lastX - drag.startX) / zoom,
+                    y: drag.originalY + (drag.lastY - drag.startY) / zoom,
+                },
+                drag.limit
+            );
             node.x = clamped.x;
             node.y = clamped.y;
+            showAt(node.x, node.y);
+            updateEdges(drag.edges);
+        }
+
+        function finishVisual() {
             noteEl.style.left = `${node.x}px`;
             noteEl.style.top = `${node.y}px`;
-            redrawThreads();
+            if (hasTranslate) noteEl.style.translate = '';
+            noteEl.classList.remove('is-dragging');
         }
 
         function onMove(event) {
@@ -587,11 +661,9 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
                 clearTimeout(pressTimer);
                 pressTimer = null;
                 drag.active = true;
-                noteEl.classList.add('is-dragging');
-                canvas.classList.add('is-dragging');
-                drag.canvasRect = canvas.getBoundingClientRect();
                 drag.limit = bounds();
-                draggingKey = node.key;
+                drag.edges = edgesOf(node.key);
+                noteEl.classList.add('is-dragging');
             }
 
             if (drag.rafPending) return;
@@ -602,13 +674,12 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         function onUp() {
             cleanup();
             if (drag?.active) {
+                applyMove();
+                finishVisual();
                 state.suppressClick = true;
                 setTimeout(() => { state.suppressClick = false; }, 60);
-                noteEl.classList.remove('is-dragging');
-                canvas.classList.remove('is-dragging');
-                draggingKey = null;
                 persist();
-                setTimeout(applyZoom, 0);
+                applyZoom();
             }
             drag = null;
         }
@@ -618,12 +689,8 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
             if (drag?.active) {
                 node.x = drag.originalX;
                 node.y = drag.originalY;
-                noteEl.style.left = `${node.x}px`;
-                noteEl.style.top = `${node.y}px`;
-                draggingKey = null;
-                scheduleRedraw();
-                noteEl.classList.remove('is-dragging');
-                canvas.classList.remove('is-dragging');
+                finishVisual();
+                updateEdges(drag.edges);
             }
             drag = null;
         }
@@ -639,8 +706,8 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
                 lastY: event.clientY,
                 originalX: node.x,
                 originalY: node.y,
-                canvasRect: null,
                 limit: null,
+                edges: [],
                 active: false,
                 rafPending: false,
             };
@@ -716,60 +783,19 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         );
     }
 
-    function scheduleRedraw() {
-        if (pendingRedrawFrame) return;
-        pendingRedrawFrame = requestAnimationFrame(() => {
-            pendingRedrawFrame = 0;
-            redrawThreads();
-        });
-    }
-
-    function redrawThreads() {
-        if (!graph) {
-            if (threads.childNodes.length) threads.replaceChildren();
-            return;
-        }
-        const edges = [...graph.edges];
-        const needed = edges.length * 3;
-        const parent = threads;
-
-        while (parent.childNodes.length > needed) parent.removeChild(parent.lastChild);
-        while (parent.childNodes.length < needed) {
-            parent.append(
-                svgEl('path', { class: 'board-thread-shadow', transform: 'translate(2 3)' }),
-                svgEl('path', { class: 'board-thread' }),
-                svgEl('path', { class: 'board-thread-hi' })
-            );
-        }
-
-        const children = parent.childNodes;
-        for (let i = 0; i < edges.length; i += 1) {
-            const [fromKey, toKey] = edges[i].split('|');
-            if (draggingKey && fromKey !== draggingKey && toKey !== draggingKey) continue;
-            const from = graph.nodes.get(fromKey);
-            const to = graph.nodes.get(toKey);
-            if (!from || !to) continue;
-            const d = threadPath(from, to);
-            const el = children[i * 3];
-            if (el.getAttribute('d') === d) continue;
-            el.setAttribute('d', d);
-            children[i * 3 + 1].setAttribute('d', d);
-            children[i * 3 + 2].setAttribute('d', d);
-        }
-    }
-
     function draw() {
         canvas.querySelectorAll('.board-note').forEach((node) => node.remove());
         if (graph) {
             const nodes = [...graph.nodes.values()].map((node) => buildNote(node)).filter(Boolean);
             canvas.append(...nodes);
         }
-        redrawThreads();
+        rebuildThreads();
         if (blank) canvas.append(buildBlank());
         emptyHint.hidden = Boolean(graph || blank);
     }
 
     function closeMenu() {
+        if (menu.hidden) return;
         menu.hidden = true;
     }
 
@@ -896,21 +922,44 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     );
 
     function applyZoom() {
-        const { w, h } = canvasSize();
+        const { w, h: ch } = canvasSize();
+        if (applied.w === w && applied.h === ch && applied.zoom === zoom) return;
+        applied = { w, h: ch, zoom };
         canvas.style.width = `${w}px`;
-        canvas.style.height = `${h}px`;
+        canvas.style.height = `${ch}px`;
         canvas.style.transform = `scale(${zoom})`;
         zoomBox.style.width = `${Math.round(w * zoom)}px`;
-        zoomBox.style.height = `${Math.round(h * zoom)}px`;
-        threads.setAttribute('viewBox', `0 0 ${w} ${h}`);
+        zoomBox.style.height = `${Math.round(ch * zoom)}px`;
+        threads.setAttribute('viewBox', `0 0 ${w} ${ch}`);
     }
 
     function fit() {
         const top = board.getBoundingClientRect().top + window.scrollY;
         const tabs = document.getElementById('tabs');
         const reserved = tabs && getComputedStyle(tabs).position === 'fixed' ? tabs.offsetHeight : 0;
-        board.style.height = `${Math.max(360, window.innerHeight - top - reserved - 12)}px`;
+        const height = Math.max(360, window.innerHeight - top - reserved - 12);
+        const width = window.innerWidth;
+
+        // На телефоне resize срабатывает при сворачивании адресной строки — мелкие скачки высоты игнорируем
+        const tinyHeightChange =
+            lastBoardHeight > 0 &&
+            width === lastBoardWidth &&
+            Math.abs(height - lastBoardHeight) < FIT_HEIGHT_TOLERANCE;
+
+        if (!tinyHeightChange) {
+            lastBoardHeight = height;
+            lastBoardWidth = width;
+            board.style.height = `${height}px`;
+        }
         applyZoom();
+    }
+
+    function scheduleFit() {
+        if (fitFrame) return;
+        fitFrame = requestAnimationFrame(() => {
+            fitFrame = 0;
+            fit();
+        });
     }
 
     function setZoom(next, clientX, clientY) {
@@ -953,7 +1002,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         scroll.scrollTop = ry * zoom - scroll.clientHeight / 2;
     }
 
-    window.addEventListener('resize', fit, { signal });
+    window.addEventListener('resize', scheduleFit, { signal });
 
     graph = hydrate(readSaved(scope));
     if (graph) {

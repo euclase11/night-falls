@@ -1937,3 +1937,36 @@ body[data-world="afterlife"] .details-lock {
     border-color: var(--line);
     color: var(--muted);
 }
+
+/* ===== Доска: оптимизация производительности ===== */
+
+/* Нити в собственном слое: при перетаскивании не перерисовывается пробка и листки */
+.board-threads { will-change: transform; }
+
+/* Листок изолирован от остальной раскладки */
+.board-note { contain: layout style; }
+
+/* Во время перетаскивания листок выносится в отдельный слой */
+.board-note.is-dragging { will-change: translate; }
+
+/* Тач-устройства: без переходов, без «залипающего» hover и без тяжёлых теней */
+@media (pointer: coarse) {
+  .board-note {
+    transition: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  }
+
+  .board-note:hover {
+    transform: translateX(-50%) rotate(var(--tilt, 0deg));
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  }
+
+  .board-note.is-active {
+    box-shadow: 0 0 0 3px var(--paper-accent), 0 2px 4px rgba(0, 0, 0, 0.35);
+  }
+
+  .board-note.is-dragging,
+  body[data-world="afterlife"] .board-note.is-dragging {
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
+  }
+}
