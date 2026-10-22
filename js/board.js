@@ -222,6 +222,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     }
 
     const state = { pressTimer: null, pressX: 0, pressY: 0, longPressed: false, suppressClick: false };
+    let draggingKey = null;
     let zoom = 1;
     try {
         const savedZoom = Number(localStorage.getItem('boardZoom'));
@@ -559,13 +560,30 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
             window.removeEventListener('pointercancel', onCancel);
         };
 
+        function applyMove() {
+            if (!drag || !drag.active) return;
+            drag.rafPending = false;
+            const next = {
+                x: (drag.lastX - drag.canvasRect.left) / zoom,
+                y: (drag.lastY - drag.canvasRect.top) / zoom,
+            };
+            const clamped = clampWithBounds(next, drag.limit);
+            node.x = clamped.x;
+            node.y = clamped.y;
+            noteEl.style.left = `${node.x}px`;
+            noteEl.style.top = `${node.y}px`;
+            redrawThreads();
+        }
+
         function onMove(event) {
             if (!drag) return;
-            const dx = event.clientX - drag.startX;
-            const dy = event.clientY - drag.startY;
+            drag.lastX = event.clientX;
+            drag.lastY = event.clientY;
 
             if (!drag.active) {
-                if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+                const ddx = drag.lastX - drag.startX;
+                const ddy = drag.lastY - drag.startY;
+                if (Math.hypot(ddx, ddy) < DRAG_THRESHOLD) return;
                 clearTimeout(pressTimer);
                 pressTimer = null;
                 drag.active = true;
@@ -573,18 +591,12 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
                 canvas.classList.add('is-dragging');
                 drag.canvasRect = canvas.getBoundingClientRect();
                 drag.limit = bounds();
+                draggingKey = node.key;
             }
 
-            const next = {
-                x: (event.clientX - drag.canvasRect.left) / zoom,
-                y: (event.clientY - drag.canvasRect.top) / zoom,
-            };
-            const clamped = clampWithBounds(next, drag.limit);
-            node.x = clamped.x;
-            node.y = clamped.y;
-            noteEl.style.left = `${node.x}px`;
-            noteEl.style.top = `${node.y}px`;
-            scheduleRedraw();
+            if (drag.rafPending) return;
+            drag.rafPending = true;
+            requestAnimationFrame(applyMove);
         }
 
         function onUp() {
@@ -594,6 +606,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
                 setTimeout(() => { state.suppressClick = false; }, 60);
                 noteEl.classList.remove('is-dragging');
                 canvas.classList.remove('is-dragging');
+                draggingKey = null;
                 persist();
                 setTimeout(applyZoom, 0);
             }
@@ -607,6 +620,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
                 node.y = drag.originalY;
                 noteEl.style.left = `${node.x}px`;
                 noteEl.style.top = `${node.y}px`;
+                draggingKey = null;
                 scheduleRedraw();
                 noteEl.classList.remove('is-dragging');
                 canvas.classList.remove('is-dragging');
@@ -621,11 +635,14 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
             drag = {
                 startX: event.clientX,
                 startY: event.clientY,
+                lastX: event.clientX,
+                lastY: event.clientY,
                 originalX: node.x,
                 originalY: node.y,
                 canvasRect: null,
                 limit: null,
                 active: false,
+                rafPending: false,
             };
 
             if (event.pointerType === 'touch') {
@@ -728,6 +745,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         const children = parent.childNodes;
         for (let i = 0; i < edges.length; i += 1) {
             const [fromKey, toKey] = edges[i].split('|');
+            if (draggingKey && fromKey !== draggingKey && toKey !== draggingKey) continue;
             const from = graph.nodes.get(fromKey);
             const to = graph.nodes.get(toKey);
             if (!from || !to) continue;
