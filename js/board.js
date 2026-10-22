@@ -64,6 +64,7 @@ function readSaved(scope) {
             nodes: raw.nodes.filter((node) => typeof node.key === 'string' && Number.isFinite(node.x) && Number.isFinite(node.y)),
             edges: Array.isArray(raw.edges) ? raw.edges.filter((edge) => Array.isArray(edge) && edge.length === 2) : [],
             explored: Array.isArray(raw.explored) ? raw.explored : [],
+            removed: Array.isArray(raw.removed) ? raw.removed : [],
         };
     } catch {
         return null;
@@ -302,6 +303,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
             nodes,
             edges,
             explored: new Set(saved.explored.filter((key) => nodes.has(key))),
+            removed: new Set(saved.removed.filter((key) => byKey.has(key) && !nodes.has(key))),
         };
     }
 
@@ -315,6 +317,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
             nodes: [...graph.nodes.values()].map(({ key, x, y, from }) => ({ key, x, y, from: from ?? null })),
             edges: [...graph.edges].map((edge) => edge.split('|')),
             explored: [...graph.explored],
+            removed: [...(graph.removed ?? [])],
         });
     }
 
@@ -416,11 +419,30 @@ export function createBoardView({ all, world, userId }, callbacks) {
         toastTimer = setTimeout(() => toastEl.classList.remove('is-shown'), 2200);
     }
 
+    function autofill() {
+        if (!graph) return false;
+        let added = false;
+        for (const key of [...graph.nodes.keys()]) {
+            const node = graph.nodes.get(key);
+            if (!node) continue;
+            const neighbors = neighborKeys(key);
+            const fresh = neighbors.filter((n) => !graph.nodes.has(n) && !graph.removed.has(n));
+            if (fresh.length) {
+                placeAround(node, fresh);
+                for (const n of fresh) graph.removed.delete(n);
+                added = true;
+            }
+        }
+        if (added) recomputeEdges();
+        return added;
+    }
+
     async function explore(key) {
         const parent = graph?.nodes.get(key);
         if (!parent) return;
         await relationsReady;
         const neighbors = neighborKeys(key);
+        for (const n of neighbors) graph.removed.delete(n);
         placeAround(parent, neighbors.filter((item) => !graph.nodes.has(item)));
         graph.explored.add(key);
         recomputeEdges();
@@ -437,6 +459,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
             nodes: new Map([[key, { key, x: Math.round(point.x), y: Math.round(point.y), from: null }]]),
             edges: new Set(),
             explored: new Set(),
+            removed: new Set(),
         };
         blank = null;
         explore(key);
@@ -446,6 +469,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
         if (!graph || key === graph.root) return;
         graph.nodes.delete(key);
         graph.explored.delete(key);
+        graph.removed.add(key);
         recomputeEdges();
         pruneUnreachable(graph);
         persist();
@@ -841,8 +865,13 @@ export function createBoardView({ all, world, userId }, callbacks) {
 
     relationsReady.then(() => {
         if (signal.aborted || !graph) return;
-        recomputeEdges();
-        redrawThreads();
+        const added = autofill();
+        if (added) {
+            draw();
+        } else {
+            recomputeEdges();
+            redrawThreads();
+        }
         persist();
     });
 

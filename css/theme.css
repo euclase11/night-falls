@@ -1608,9 +1608,9 @@ body[data-world="afterlife"] .board-pin[data-table="gallery"] {
 }
 
 .board-note-media.is-photo {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1;
+    width: 5.5rem;
+    height: 5.5rem;
+    margin-inline: auto;
     border: 4px solid var(--photo-frame);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
@@ -1634,17 +1634,17 @@ body[data-world="afterlife"] .board-pin[data-table="gallery"] {
     height: 2.4rem;
 }
 
-body[data-world="real"] .board-note-media.is-icon[data-table="characters"] { --type-color: #7fa565; }
-body[data-world="real"] .board-note-media.is-icon[data-table="settlements"] { --type-color: #d47a2a; }
-body[data-world="real"] .board-note-media.is-icon[data-table="events"] { --type-color: #c04a5a; }
-body[data-world="real"] .board-note-media.is-icon[data-table="misc"] { --type-color: #8a9aa8; }
-body[data-world="real"] .board-note-media.is-icon[data-table="gallery"] { --type-color: #c48a6a; }
+body[data-world="real"] .board-note-media.is-icon[data-table="characters"] { --type-color: #7a2530; }
+body[data-world="real"] .board-note-media.is-icon[data-table="settlements"] { --type-color: #b8571e; }
+body[data-world="real"] .board-note-media.is-icon[data-table="events"] { --type-color: #5a1a24; }
+body[data-world="real"] .board-note-media.is-icon[data-table="misc"] { --type-color: #3a3034; }
+body[data-world="real"] .board-note-media.is-icon[data-table="gallery"] { --type-color: #8b6f47; }
 
-body[data-world="afterlife"] .board-note-media.is-icon[data-table="characters"] { --type-color: #4a8c5a; }
-body[data-world="afterlife"] .board-note-media.is-icon[data-table="settlements"] { --type-color: #b8783a; }
-body[data-world="afterlife"] .board-note-media.is-icon[data-table="events"] { --type-color: #8c2f4f; }
-body[data-world="afterlife"] .board-note-media.is-icon[data-table="misc"] { --type-color: #6a5a8a; }
-body[data-world="afterlife"] .board-note-media.is-icon[data-table="gallery"] { --type-color: #a04a6a; }
+body[data-world="afterlife"] .board-note-media.is-icon[data-table="characters"] { --type-color: #a0647a; }
+body[data-world="afterlife"] .board-note-media.is-icon[data-table="settlements"] { --type-color: #a87a3a; }
+body[data-world="afterlife"] .board-note-media.is-icon[data-table="events"] { --type-color: #7a2e44; }
+body[data-world="afterlife"] .board-note-media.is-icon[data-table="misc"] { --type-color: #7a6a8a; }
+body[data-world="afterlife"] .board-note-media.is-icon[data-table="gallery"] { --type-color: #9a5a72; }
 
 .board-note-kind {
     display: block;
