@@ -17,9 +17,10 @@ const TYPE_ICONS = {
 const BLANK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>';
 
 const STORAGE_PREFIX = 'board:';
-const NOTE_W = 250;
-const NOTE_H = 280;
+const NOTE_W = 190;
+const NOTE_H = 260;
 const GAP = 24;
+const EDGE_PAD = 40;
 const LONG_PRESS_MS = 550;
 const MOVE_CANCEL = 10;
 const DRAG_THRESHOLD = 5;
@@ -256,6 +257,16 @@ export function createBoardView({ all, world, userId }, callbacks) {
         return [...result];
     }
 
+    function recomputeEdges(targetGraph = graph) {
+        if (!targetGraph) return;
+        targetGraph.edges = new Set();
+        for (const key of targetGraph.nodes.keys()) {
+            for (const neighbor of neighborKeys(key)) {
+                if (targetGraph.nodes.has(neighbor)) targetGraph.edges.add(edgeKey(key, neighbor));
+            }
+        }
+    }
+
     function hydrate(saved) {
         if (!saved) return null;
         const nodes = new Map();
@@ -263,21 +274,13 @@ export function createBoardView({ all, world, userId }, callbacks) {
             if (byKey.has(node.key)) nodes.set(node.key, { key: node.key, x: node.x, y: node.y, from: node.from ?? null });
         }
         if (!nodes.has(saved.root)) return null;
-        const edges = new Set();
-        for (const [a, b] of saved.edges) {
-            if (nodes.has(a) && nodes.has(b)) edges.add(edgeKey(a, b));
-        }
         const result = {
             root: saved.root,
             nodes,
-            edges,
+            edges: new Set(),
             explored: new Set(saved.explored.filter((key) => nodes.has(key))),
         };
-        for (const key of nodes.keys()) {
-            for (const neighbor of neighborKeys(key)) {
-                if (nodes.has(neighbor)) result.edges.add(edgeKey(key, neighbor));
-            }
-        }
+        recomputeEdges(result);
         pruneUnreachable(result);
         return result;
     }
@@ -299,10 +302,10 @@ export function createBoardView({ all, world, userId }, callbacks) {
         const halfW = Math.max(canvas.clientWidth, 1600) / 2;
         const halfH = Math.max(canvas.clientHeight, 1100) / 2;
         return {
-            minX: -halfW + NOTE_W / 2 + 20,
-            maxX: halfW - NOTE_W / 2 - 20,
-            minY: -halfH + 40,
-            maxY: halfH - NOTE_H - 20,
+            minX: -halfW + NOTE_W / 2 + EDGE_PAD,
+            maxX: halfW - NOTE_W / 2 - EDGE_PAD,
+            minY: -halfH + EDGE_PAD,
+            maxY: halfH - NOTE_H - EDGE_PAD,
         };
     }
 
@@ -332,7 +335,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
         const spread = keys.length > 1 ? (isFull ? Math.PI * 2 : Math.PI * 1.4) : 0;
         const placed = [...graph.nodes.values()];
 
-        const radii = [320, 380, 450, 530, 620, 720, 840];
+        const radii = [300, 360, 430, 510, 600, 700, 820];
         const turns = [0, 0.18, -0.18, 0.35, -0.35, 0.52, -0.52, 0.7, -0.7, 0.88, -0.88, 1.05, -1.05];
 
         keys.forEach((key, index) => {
@@ -357,7 +360,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
             }
 
             if (!spot) {
-                for (let radius = 300; radius < 1100 && !spot; radius += 50) {
+                for (let radius = 300; radius < 1000 && !spot; radius += 50) {
                     for (let step = 0; step < 24 && !spot; step++) {
                         const angle = (step / 24) * Math.PI * 2;
                         const candidate = clampPoint({
@@ -371,8 +374,8 @@ export function createBoardView({ all, world, userId }, callbacks) {
 
             if (!spot) {
                 spot = clampPoint({
-                    x: parent.x + Math.cos(idealAngle) * 360,
-                    y: parent.y + Math.sin(idealAngle) * 360,
+                    x: parent.x + Math.cos(idealAngle) * 340,
+                    y: parent.y + Math.sin(idealAngle) * 340,
                 });
             }
 
@@ -395,8 +398,8 @@ export function createBoardView({ all, world, userId }, callbacks) {
         await relationsReady;
         const neighbors = neighborKeys(key);
         placeAround(parent, neighbors.filter((item) => !graph.nodes.has(item)));
-        for (const item of neighbors) graph.edges.add(edgeKey(key, item));
         graph.explored.add(key);
+        recomputeEdges();
         persist();
         draw();
         if (!neighbors.length) toast('У этой записи нет связей');
@@ -419,9 +422,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
         if (!graph || key === graph.root) return;
         graph.nodes.delete(key);
         graph.explored.delete(key);
-        for (const edge of [...graph.edges]) {
-            if (edge.split('|').includes(key)) graph.edges.delete(edge);
-        }
+        recomputeEdges();
         pruneUnreachable(graph);
         persist();
         draw();
@@ -568,7 +569,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
                 'aria-label': `${kind}: ${entry.name}`,
                 style: `left: calc(50% + ${node.x}px); top: calc(50% + ${node.y}px); --tilt: ${tilt}deg;`,
             },
-            h('span', { class: 'board-pin' }),
+            h('span', { class: 'board-pin', 'data-table': entry.table }),
             buildMedia(entry),
             h('span', { class: 'board-note-kind' }, kind),
             h('h3', {}, entry.name),
