@@ -1156,13 +1156,33 @@ body[data-world="afterlife"] #entry-form-message.is-success { color: #f2a6c2; }
 }
 
 @media (max-width: 40rem) {
-    .title { order: 1; }
-    #logout-btn {
+    .top {
+        gap: 0.5rem 0.75rem;
+    }
+    .title {
+        order: 1;
+        flex: 1 1 100%;
+        font-size: clamp(1.35rem, 5vw, 1.6rem);
+    }
+    #world-switch {
         order: 2;
-        margin-left: auto;
+        flex: 0 1 auto;
+    }
+    #world-switch button {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.82rem;
+    }
+    .top-actions {
+        order: 2;
+        flex: 0 0 auto;
+    }
+    #logout-btn {
         padding: 0.35rem 0.8rem;
         font-size: 0.85rem;
     }
-    #world-switch { order: 3; }
-    #auth-container { order: 4; width: 100%; }
+    #auth-container {
+        order: 3;
+        flex: 1 1 100%;
+        width: 100%;
+    }
 }
