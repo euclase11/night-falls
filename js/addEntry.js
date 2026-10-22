@@ -6,6 +6,7 @@ import { deleteFiles, imageUrlsOf } from './upload.js';
 import { createRichField } from './editor.js';
 import { renderRelationsField } from './relations.js';
 import { hasLinkKey, unlinkKey } from './richtext.js';
+import { acquireLock, releaseLock, startHeartbeat, getLock, getCurrentUser } from './locks.js';
 
 const section = document.getElementById('entry-form-section');
 const formEl = document.getElementById('entry-form');
@@ -33,6 +34,7 @@ let isLoggedIn = false;
 let activeKey = null;
 let editing = null;
 let dirty = false;
+let activeLock = null;
 
 function formKeyForTab(tabId) {
   return TAB_FORMS[tabId] ?? null;
@@ -384,9 +386,36 @@ export function openForm(key, prefill = {}, entry = null) {
   section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-export function editEntry(entry) {
-  if (!FORMS[entry.table]) return;
-  openForm(entry.table, {}, entry);
+export async function editEntry(entry) {
+    if (!FORMS[entry.table]) return;
+    if (entry.derived) return;
+
+    const result = await acquireLock(entry.table, entry.id);
+    if (!result.ok) {
+        if (result.reason === 'locked') {
+            const who = result.holder?.user_email || 'другой пользователь';
+            window.alert(`Сейчас запись редактирует ${who}. Попробуйте позже.`);
+        } else if (result.reason === 'no-session') {
+            window.alert('Войдите, чтобы редактировать.');
+        } else {
+            window.alert('Не удалось получить блокировку. Попробуйте ещё раз.');
+        }
+        return;
+    }
+
+    if (activeLock) {
+        activeLock.stop();
+        await releaseLock(activeLock.table, activeLock.id);
+        activeLock = null;
+    }
+
+    activeLock = {
+        table: entry.table,
+        id: entry.id,
+        stop: startHeartbeat(entry.table, entry.id),
+    };
+
+    openForm(entry.table, {}, entry);
 }
 
 async function removeReferences(entry) {
@@ -406,25 +435,35 @@ async function removeReferences(entry) {
 }
 
 export async function deleteEntry(entry) {
-  if (!window.confirm(`Удалить «${entry.name}»?`)) return false;
+    if (!window.confirm(`Удалить «${entry.name}»?`)) return false;
 
-  const { data, error } = await supabase.from(entry.table).delete().eq('id', entry.id).select();
-  if (error) {
-    window.alert('Ошибка: ' + error.message);
-    return false;
-  }
-  if (!data || !data.length) {
-    window.alert('Не удалось удалить: нет прав или запись уже удалена.');
-    return false;
-  }
+    const lock = await getLock(entry.table, entry.id);
+    if (lock) {
+        const me = await getCurrentUser();
+        if (lock.user_id !== me?.id) {
+            const who = lock.user_email || 'другой пользователь';
+            window.alert(`Нельзя удалить: сейчас запись редактирует ${who}.`);
+            return false;
+        }
+    }
 
-  await Promise.all([
-    deleteFiles(imageUrlsOf(entry.raw)).catch(console.error),
-    removeReferences(entry).catch(console.error),
-  ]);
+    const { data, error } = await supabase.from(entry.table).delete().eq('id', entry.id).select();
+    if (error) {
+        window.alert('Ошибка: ' + error.message);
+        return false;
+    }
+    if (!data || !data.length) {
+        window.alert('Не удалось удалить: нет прав или запись уже удалена.');
+        return false;
+    }
 
-  document.dispatchEvent(new CustomEvent('data:updated'));
-  return true;
+    await Promise.all([
+        deleteFiles(imageUrlsOf(entry.raw)).catch(console.error),
+        removeReferences(entry).catch(console.error),
+    ]);
+
+    document.dispatchEvent(new CustomEvent('data:updated'));
+    return true;
 }
 
 export async function moveEvent(entry, order) {
@@ -442,13 +481,18 @@ export async function moveEvent(entry, order) {
 }
 
 function closeForm() {
-  dirty = false;
-  section.hidden = true;
-  formEl.reset();
-  clearMessage();
-  activeKey = null;
-  editing = null;
-  updateButtonVisibility();
+    if (activeLock) {
+        activeLock.stop();
+        releaseLock(activeLock.table, activeLock.id);
+        activeLock = null;
+    }
+    dirty = false;
+    section.hidden = true;
+    formEl.reset();
+    clearMessage();
+    activeKey = null;
+    editing = null;
+    updateButtonVisibility();
 }
 
 function showMessage(text, type = '') {
@@ -512,10 +556,13 @@ document.addEventListener('keydown', (event) => {
 });
 
 window.addEventListener('beforeunload', (event) => {
-  if (!dirty || section.hidden) return;
-  event.preventDefault();
-  // eslint-disable-next-line deprecation/deprecation
-  event.returnValue = '';
+    if (activeLock) {
+        releaseLock(activeLock.table, activeLock.id);
+        activeLock = null;
+    }
+    if (!dirty || section.hidden) return;
+    event.preventDefault();
+    event.returnValue = '';
 });
 
 formEl?.addEventListener('submit', async (e) => {

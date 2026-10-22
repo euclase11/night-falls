@@ -605,11 +605,14 @@ function favoriteButton(isFavorite, onToggle) {
 
 export function renderEntryDetails(
   entry,
-  { canEdit = false, isFavorite = false, onToggleFavorite, onOpen, onBack, onEdit, onDelete } = {}
+  { canEdit = false, isFavorite = false, lockedBy = null, onToggleFavorite, onOpen, onBack, onEdit, onDelete } = {}
 ) {
   const related = entry.images ?? [];
   const gallery = [entry.imageUrl, ...related].filter(Boolean);
   const offset = entry.imageUrl ? 1 : 0;
+  const lockText = lockedBy?.user_email
+    ? `Сейчас запись редактирует ${lockedBy.user_email}`
+    : 'Сейчас запись редактирует другой пользователь';
 
   const openLink = (key) =>
     store.resolve([key]).then(([target]) => {
@@ -647,6 +650,17 @@ export function renderEntryDetails(
     });
   }
 
+  const editBtn = iconButton('edit', 'Редактировать', onEdit, 'details-edit-btn');
+  const deleteBtn = iconButton('trash', 'Удалить', onDelete, 'danger details-delete-btn');
+  if (lockedBy) {
+    editBtn.disabled = true;
+    editBtn.title = lockText;
+    editBtn.setAttribute('aria-label', lockText);
+    deleteBtn.disabled = true;
+    deleteBtn.title = lockText;
+    deleteBtn.setAttribute('aria-label', lockText);
+  }
+
   return h(
     'div',
     { class: 'entry-details' },
@@ -661,6 +675,7 @@ export function renderEntryDetails(
     h('h2', {}, entry.name),
     entry.kind ? h('p', { class: 'details-kind' }, entry.kind) : null,
     entry.meta ? h('p', { class: 'details-meta' }, entry.meta) : null,
+    lockedBy ? h('p', { class: 'details-lock' }, lockText) : null,
     tabs,
     main,
     relations,
@@ -669,8 +684,8 @@ export function renderEntryDetails(
         'div',
         { class: 'details-actions' },
         favoriteButton(isFavorite, onToggleFavorite),
-        iconButton('edit', 'Редактировать', onEdit),
-        iconButton('trash', 'Удалить', onDelete, 'danger')
+        editBtn,
+        deleteBtn
       )
       : null
   );

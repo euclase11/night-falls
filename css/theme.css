@@ -1907,3 +1907,34 @@ body[data-tab="board"] .atmosphere {
   min-height: 0;
   transform-origin: 0 0;
 }
+
+.details-lock {
+    margin: 0.65rem 0 0.25rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    border: 1px solid transparent;
+}
+
+body[data-world="real"] .details-lock {
+    background: rgba(216, 168, 42, 0.12);
+    border-color: rgba(216, 168, 42, 0.35);
+    color: #d4a82a;
+}
+
+body[data-world="afterlife"] .details-lock {
+    background: rgba(212, 112, 138, 0.14);
+    border-color: rgba(212, 112, 138, 0.4);
+    color: #d4708a;
+}
+
+.details-actions button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.details-actions button:disabled:hover {
+    border-color: var(--line);
+    color: var(--muted);
+}

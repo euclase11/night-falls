@@ -8,6 +8,7 @@ import { editEntry, deleteEntry, moveEvent } from './addEntry.js';
 import { destroyMapView } from './map.js';
 import { loader } from './loader.js';
 import { destroyBoardView } from './board.js';
+import { getLock, getCurrentUser } from './locks.js';
 
 const DEFAULT_TAB = 'timeline';
 
@@ -226,10 +227,18 @@ let showToken = 0;
 async function showEntry(entry) {
   const token = ++showToken;
   const favorites = await store.favorites();
+  const lock = entry.derived ? null : await getLock(entry.table, entry.id);
   if (token !== showToken) return;
+
+  const me = await getCurrentUser();
+  if (token !== showToken) return;
+
+  const lockedByOther = lock && lock.user_id !== me?.id ? lock : null;
+
   els.sheetBody.replaceChildren(
     renderEntryDetails(entry, {
       canEdit: document.body.dataset.auth === 'in' && !entry.derived,
+      lockedBy: lockedByOther,
       isFavorite: favorites.has(`${entry.table}:${entry.id}`),
       onToggleFavorite: async () => {
         const value = await store.toggleFavorite(entry);
