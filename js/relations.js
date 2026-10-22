@@ -69,6 +69,14 @@ export async function saveRelations(characterId, rows) {
   }
 }
 
+export async function fetchAllRelations() {
+  const { data, error } = await supabase
+    .from('character_relations')
+    .select('from_id, to_id');
+  if (error) throw error;
+  return data ?? [];
+}
+
 function svgEl(name, attrs = {}) {
   const node = document.createElementNS(SVG_NS, name);
   for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);

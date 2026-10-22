@@ -2,22 +2,17 @@ import { h } from './util.js';
 import { refLabel } from './store.js';
 import { plainText } from './richtext.js';
 import { fuzzyRank } from './fuzzy.js';
+import { fetchAllRelations } from './relations.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const STORAGE_PREFIX = 'board:';
 const NOTE_W = 190;
-const NOTE_H = 250;
+const NOTE_H = 260;
 const GAP = 24;
 const LONG_PRESS_MS = 550;
 const MOVE_CANCEL = 10;
+const DRAG_THRESHOLD = 5;
 const WORLD_LABELS = { real: 'реальный мир', afterlife: 'посмертие' };
-const ICONS = {
-  characters: ['👤'],
-  settlements: ['📍', '🏘️', '🗺️'],
-  events: ['🗓️'],
-  misc: ['🗃️', '📋', '📑', '🗒️'],
-  gallery: ['🖼️'],
-};
 
 let activeBoard = null;
 
@@ -192,10 +187,30 @@ export function createBoardView({ all, world, userId }, callbacks) {
 
   const scope = `${userId ?? 'guest'}:${world}`;
   const byKey = new Map(all.map((entry) => [`${entry.table}:${entry.id}`, entry]));
-  const state = { pressTimer: null, pressX: 0, pressY: 0, longPressed: false };
+  const state = { pressTimer: null, pressX: 0, pressY: 0, longPressed: false, suppressClick: false };
   let graph = null;
   let blank = null;
   let toastTimer = null;
+  let relationsMap = null;
+
+  // Preload character relations in background; awaited on first explore
+  const relationsReady = fetchAllRelations()
+    .then((rows) => {
+      const map = new Map();
+      for (const rel of rows) {
+        const a = `characters:${rel.from_id}`;
+        const b = `characters:${rel.to_id}`;
+        if (!map.has(a)) map.set(a, new Set());
+        if (!map.has(b)) map.set(b, new Set());
+        map.get(a).add(b);
+        map.get(b).add(a);
+      }
+      relationsMap = map;
+    })
+    .catch((error) => {
+      console.error('Failed to load character relations:', error);
+      relationsMap = new Map();
+    });
 
   const threads = svgEl('svg', { class: 'board-threads', preserveAspectRatio: 'none', 'aria-hidden': 'true' });
   const canvas = h('div', { class: 'board-canvas' }, threads);
@@ -222,6 +237,12 @@ export function createBoardView({ all, world, userId }, callbacks) {
     for (const item of all) {
       const itemKey = `${item.table}:${item.id}`;
       if (itemKey !== key && (item.links ?? []).includes(key)) result.add(itemKey);
+    }
+    // Character relationships from the separate relations table
+    if (relationsMap?.has(key)) {
+      for (const relKey of relationsMap.get(key)) {
+        if (relKey !== key && byKey.has(relKey)) result.add(relKey);
+      }
     }
     return [...result];
   }
@@ -280,36 +301,68 @@ export function createBoardView({ all, world, userId }, callbacks) {
   }
 
   function overlaps(point, others) {
-    return others.some((other) => Math.abs(other.x - point.x) < NOTE_W + GAP && Math.abs(other.y - point.y) < NOTE_H + GAP);
+    return others.some(
+      (other) =>
+        Math.abs(other.x - point.x) < NOTE_W + GAP &&
+        Math.abs(other.y - point.y) < NOTE_H + GAP
+    );
   }
 
   function placeAround(parent, keys) {
+    if (!keys.length) return;
     const fromNode = parent.from ? graph.nodes.get(parent.from) : null;
-    const full = parent.key === graph.root || !fromNode;
-    const base = fromNode ? Math.atan2(parent.y - fromNode.y, parent.x - fromNode.x) : -Math.PI / 2;
-    const spread = full ? Math.PI * 2 : Math.PI * 1.4;
+    const isFull = !fromNode || parent.key === graph.root;
+    const baseAngle = fromNode
+      ? Math.atan2(parent.y - fromNode.y, parent.x - fromNode.x)
+      : -Math.PI / 2;
+    const spread = keys.length > 1 ? (isFull ? Math.PI * 2 : Math.PI * 1.4) : 0;
     const placed = [...graph.nodes.values()];
 
+    const radii = [300, 360, 430, 510, 600, 700, 820];
+    const turns = [0, 0.18, -0.18, 0.35, -0.35, 0.52, -0.52, 0.7, -0.7, 0.88, -0.88, 1.05, -1.05];
+
     keys.forEach((key, index) => {
-      let angle = base;
-      if (keys.length > 1) angle = full ? base + (index * spread) / keys.length : base - spread / 2 + (index * spread) / (keys.length - 1);
+      const angleOffset = keys.length > 1
+        ? (index / (keys.length - 1) - 0.5) * spread
+        : 0;
+      const idealAngle = baseAngle + angleOffset;
       let spot = null;
-      for (const radius of [310, 440, 570]) {
-        for (const turn of [0, 0.28, -0.28, 0.56, -0.56, 0.84, -0.84]) {
-          const candidate = {
-            x: parent.x + Math.cos(angle + turn) * radius,
-            y: parent.y + Math.sin(angle + turn) * radius,
-          };
-          const bounded = clampPoint(candidate);
-          if (Math.hypot(bounded.x - candidate.x, bounded.y - candidate.y) > 40) continue;
-          if (!overlaps(bounded, placed)) {
-            spot = bounded;
-            break;
+
+      outer: for (const radius of radii) {
+        for (const turn of turns) {
+          const angle = idealAngle + turn;
+          const candidate = clampPoint({
+            x: parent.x + Math.cos(angle) * radius,
+            y: parent.y + Math.sin(angle) * radius,
+          });
+          if (!overlaps(candidate, placed)) {
+            spot = candidate;
+            break outer;
           }
         }
-        if (spot) break;
       }
-      if (!spot) spot = clampPoint({ x: parent.x + Math.cos(angle) * 310, y: parent.y + Math.sin(angle) * 310 });
+
+      if (!spot) {
+        // Wide sweep as last resort before giving up
+        for (let radius = 280; radius < 1000 && !spot; radius += 50) {
+          for (let step = 0; step < 24 && !spot; step++) {
+            const angle = (step / 24) * Math.PI * 2;
+            const candidate = clampPoint({
+              x: parent.x + Math.cos(angle) * radius,
+              y: parent.y + Math.sin(angle) * radius,
+            });
+            if (!overlaps(candidate, placed)) spot = candidate;
+          }
+        }
+      }
+
+      if (!spot) {
+        spot = clampPoint({
+          x: parent.x + Math.cos(idealAngle) * 340,
+          y: parent.y + Math.sin(idealAngle) * 340,
+        });
+      }
+
       const node = { key, x: Math.round(spot.x), y: Math.round(spot.y), from: parent.key };
       graph.nodes.set(key, node);
       placed.push(node);
@@ -323,9 +376,10 @@ export function createBoardView({ all, world, userId }, callbacks) {
     toastTimer = setTimeout(() => toastEl.classList.remove('is-shown'), 2200);
   }
 
-  function explore(key) {
+  async function explore(key) {
     const parent = graph?.nodes.get(key);
     if (!parent) return;
+    await relationsReady;
     const neighbors = neighborKeys(key);
     placeAround(parent, neighbors.filter((item) => !graph.nodes.has(item)));
     for (const item of neighbors) graph.edges.add(edgeKey(key, item));
@@ -367,7 +421,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
     draw();
   }
 
-  function buildMedia(entry, seed) {
+  function buildMedia(entry) {
     if (entry.imageUrl) {
       return h(
         'div',
@@ -375,17 +429,122 @@ export function createBoardView({ all, world, userId }, callbacks) {
         h('img', { src: entry.imageUrl, alt: '', loading: 'lazy', decoding: 'async' })
       );
     }
-    const set = ICONS[entry.table] ?? ICONS.misc;
-    return h('div', { class: 'board-note-media is-icon', 'aria-hidden': 'true' }, set[seed % set.length]);
+    return h('div', {
+      class: 'board-note-media is-icon',
+      'data-table': entry.table,
+      'aria-hidden': 'true',
+    });
+  }
+
+  function setupDrag(noteEl, node) {
+    let pressTimer = null;
+    let drag = null;
+
+    const cleanup = () => {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onCancel);
+    };
+
+    function onMove(event) {
+      if (!drag) return;
+      const dx = event.clientX - drag.startX;
+      const dy = event.clientY - drag.startY;
+
+      if (!drag.active) {
+        if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+        clearTimeout(pressTimer);
+        pressTimer = null;
+        drag.active = true;
+        noteEl.classList.add('is-dragging');
+        canvas.classList.add('is-dragging');
+        const rect = noteEl.getBoundingClientRect();
+        drag.offsetX = drag.startX - (rect.left + rect.width / 2);
+        drag.offsetY = drag.startY - rect.top;
+      }
+
+      event.preventDefault();
+      const canvasRect = canvas.getBoundingClientRect();
+      const halfW = canvasRect.width / 2;
+      const halfH = canvasRect.height / 2;
+      const next = clampPoint({
+        x: event.clientX - canvasRect.left - halfW - drag.offsetX,
+        y: event.clientY - canvasRect.top - halfH - drag.offsetY,
+      });
+      node.x = next.x;
+      node.y = next.y;
+      noteEl.style.left = `calc(50% + ${node.x}px)`;
+      noteEl.style.top = `calc(50% + ${node.y}px)`;
+      redrawThreads();
+    }
+
+    function onUp() {
+      cleanup();
+      if (drag?.active) {
+        state.suppressClick = true;
+        setTimeout(() => { state.suppressClick = false; }, 60);
+        noteEl.classList.remove('is-dragging');
+        canvas.classList.remove('is-dragging');
+        persist();
+      }
+      drag = null;
+    }
+
+    function onCancel() {
+      cleanup();
+      if (drag?.active) {
+        node.x = drag.originalX;
+        node.y = drag.originalY;
+        noteEl.style.left = `calc(50% + ${node.x}px)`;
+        noteEl.style.top = `calc(50% + ${node.y}px)`;
+        redrawThreads();
+        noteEl.classList.remove('is-dragging');
+        canvas.classList.remove('is-dragging');
+      }
+      drag = null;
+    }
+
+    noteEl.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      if (event.target.closest('button')) return;
+
+      drag = {
+        startX: event.clientX,
+        startY: event.clientY,
+        offsetX: 0,
+        offsetY: 0,
+        originalX: node.x,
+        originalY: node.y,
+        active: false,
+      };
+
+      if (event.pointerType === 'touch') {
+        const { clientX, clientY, target } = event;
+        pressTimer = setTimeout(() => {
+          pressTimer = null;
+          if (drag?.active) return;
+          state.longPressed = true;
+          drag = null;
+          openContext(target, clientX, clientY);
+        }, LONG_PRESS_MS);
+      }
+
+      window.addEventListener('pointermove', onMove, { passive: false });
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onCancel);
+    });
   }
 
   function buildNote(node) {
     const entry = byKey.get(node.key);
+    if (!entry) return null;
     const seed = hash(node.key);
     const tilt = (((seed >>> 3) % 61) - 30) / 10;
     const kind = `${refLabel(entry)}${entry.meta ? ` · ${entry.meta}` : ''}`;
     const text = plainText(entry.description).trim();
-    return h(
+    const noteEl = h(
       'div',
       {
         class: `board-note paper-${seed % 3} style-${(seed >>> 5) % 3}${node.key === graph.root ? ' is-root' : ''}`,
@@ -396,11 +555,13 @@ export function createBoardView({ all, world, userId }, callbacks) {
         style: `left: calc(50% + ${node.x}px); top: calc(50% + ${node.y}px); --tilt: ${tilt}deg;`,
       },
       h('span', { class: 'board-pin' }),
-      buildMedia(entry, seed),
+      buildMedia(entry),
       h('span', { class: 'board-note-kind' }, kind),
       h('h3', {}, entry.name),
       text ? h('p', {}, text) : null
     );
+    setupDrag(noteEl, node);
+    return noteEl;
   }
 
   function buildBlank() {
@@ -411,6 +572,8 @@ export function createBoardView({ all, world, userId }, callbacks) {
         style: `left: calc(50% + ${blank.x}px); top: calc(50% + ${blank.y}px); --tilt: -1.5deg;`,
       },
       h('span', { class: 'board-pin' }),
+      h('span', { class: 'board-blank-icon', 'aria-hidden': 'true' }),
+      h('p', { class: 'board-blank-caption' }, 'С чего начать'),
       h(
         'button',
         {
@@ -426,23 +589,32 @@ export function createBoardView({ all, world, userId }, callbacks) {
     );
   }
 
-  function draw() {
-    canvas.querySelectorAll('.board-note').forEach((node) => node.remove());
+  function redrawThreads() {
+    if (!graph) {
+      threads.replaceChildren();
+      return;
+    }
     const layers = [];
-    if (graph) {
-      for (const edge of graph.edges) {
-        const [from, to] = edge.split('|').map((key) => graph.nodes.get(key));
-        if (!from || !to) continue;
-        const d = threadPath(from, to);
-        layers.push(
-          svgEl('path', { d, class: 'board-thread-shadow', transform: 'translate(2 3)' }),
-          svgEl('path', { d, class: 'board-thread' }),
-          svgEl('path', { d, class: 'board-thread-hi' })
-        );
-      }
-      canvas.append(...[...graph.nodes.values()].map((node) => buildNote(node)));
+    for (const edge of graph.edges) {
+      const [from, to] = edge.split('|').map((key) => graph.nodes.get(key));
+      if (!from || !to) continue;
+      const d = threadPath(from, to);
+      layers.push(
+        svgEl('path', { d, class: 'board-thread-shadow', transform: 'translate(2 3)' }),
+        svgEl('path', { d, class: 'board-thread' }),
+        svgEl('path', { d, class: 'board-thread-hi' })
+      );
     }
     threads.replaceChildren(...layers);
+  }
+
+  function draw() {
+    canvas.querySelectorAll('.board-note').forEach((node) => node.remove());
+    if (graph) {
+      const nodes = [...graph.nodes.values()].map((node) => buildNote(node)).filter(Boolean);
+      canvas.append(...nodes);
+    }
+    redrawThreads();
     if (blank) canvas.append(buildBlank());
     emptyHint.hidden = Boolean(graph || blank);
   }
@@ -498,10 +670,8 @@ export function createBoardView({ all, world, userId }, callbacks) {
   }
 
   canvas.addEventListener('click', (event) => {
-    if (state.longPressed) {
-      state.longPressed = false;
-      return;
-    }
+    if (state.suppressClick) { state.suppressClick = false; return; }
+    if (state.longPressed) { state.longPressed = false; return; }
     closeMenu();
     const note = event.target.closest('.board-note');
     if (note) {
@@ -526,6 +696,8 @@ export function createBoardView({ all, world, userId }, callbacks) {
   });
 
   canvas.addEventListener('pointerdown', (event) => {
+    // Notes handle their own pointer interaction
+    if (event.target.closest('.board-note')) return;
     state.longPressed = false;
     if (event.pointerType !== 'touch') return;
     clearPress();
