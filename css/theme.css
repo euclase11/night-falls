@@ -1473,9 +1473,8 @@ body[data-world="real"] .board::after {
 .board-note.is-dragging {
     z-index: 100;
     cursor: grabbing;
-    transform: translateX(-50%) translateY(-3px) rotate(var(--tilt, 0deg)) scale(1.03);
     box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5), inset 0 0 22px var(--paper-edge);
-    transition: transform 0.05s ease, box-shadow 0.05s ease;
+    transition: box-shadow 0.05s ease;
 }
 
 body[data-world="afterlife"] .board-note.is-dragging {
