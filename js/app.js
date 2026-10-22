@@ -7,6 +7,7 @@ import { store, invalidateCache } from './store.js';
 import { editEntry, deleteEntry, moveEvent } from './addEntry.js';
 import { destroyMapView } from './map.js';
 import { loader } from './loader.js';
+import { destroyBoardView } from './board.js';
 
 const DEFAULT_TAB = 'timeline';
 
@@ -126,6 +127,7 @@ const ctx = {
 
 function renderChrome() {
   const tab = TABS[state.tab];
+  document.body.dataset.tab = state.tab;
   document.body.dataset.world = state.world;
   els.worldSwitch.hidden = !tab.useWorld;
   els.toolbar.hidden = !tab.useSearch;
@@ -276,6 +278,7 @@ function closeSheet(restoreFocus = true) {
 
 function showTab(name) {
   destroyMapView();
+  destroyBoardView();
   state.tab = name;
   state.query = '';
   state.kind = 'all';
