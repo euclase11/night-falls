@@ -135,33 +135,39 @@ function openPicker({ all, world, onPick }) {
     );
     const overlay = h('div', { class: 'rt-search', role: 'dialog', 'aria-modal': 'true' }, card);
 
-    const noteEls = new Map();
-
     function draw() {
-        const wanted = graph ? new Set(graph.nodes.keys()) : new Set();
-        for (const [key, el] of noteEls) {
-            if (!wanted.has(key)) {
-                el.remove();
-                noteEls.delete(key);
-            }
+        const pool = all
+            .filter((entry) => otherWorld.checked || !entry.world || entry.world === world)
+            .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+        const query = input.value.trim();
+        const rows = query ? fuzzyRank(pool, query, (entry) => entry.name, 60) : pool;
+        if (!rows.length) {
+            list.replaceChildren(h('li', { class: 'links-hint' }, 'Ничего не найдено'));
+            return;
         }
-        if (graph) {
-            for (const node of graph.nodes.values()) {
-                let el = noteEls.get(node.key);
-                if (!el) {
-                    el = buildNote(node);
-                    if (!el) continue;
-                    noteEls.set(node.key, el);
-                    canvas.append(el);
-                }
-                el.style.left = `calc(50% + ${node.x}px)`;
-                el.style.top = `calc(50% + ${node.y}px)`;
-            }
-        }
-        canvas.querySelector('.board-note.is-blank')?.remove();
-        redrawThreads();
-        if (blank) canvas.append(buildBlank());
-        emptyHint.hidden = Boolean(graph || blank);
+        list.replaceChildren(
+            ...rows.map((entry) =>
+                h(
+                    'li',
+                    {},
+                    h(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => {
+                                close();
+                                onPick(entry);
+                            },
+                        },
+                        h('span', { class: 'related-kind' }, refLabel(entry)),
+                        h('span', { class: 'related-name' }, entry.name),
+                        entry.world && entry.world !== world
+                            ? h('span', { class: 'rt-world' }, WORLD_LABELS[entry.world] ?? entry.world)
+                            : null
+                    )
+                )
+            )
+        );
     }
 
     function onKey(event) {
