@@ -22,8 +22,8 @@ const NOTE_H = 260;
 const NOTE_MAX_W = 288;
 const GAP = 24;
 const EDGE_PAD = 40;
-const CANVAS_MIN_W = 3000;
-const CANVAS_MIN_H = 2000;
+const HARD_MAX_X = 4000;
+const HARD_MAX_Y = 3000;
 const LONG_PRESS_MS = 550;
 const MOVE_CANCEL = 10;
 const DRAG_THRESHOLD = 5;
@@ -247,15 +247,13 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     canvas.style.position = 'absolute';
     canvas.style.top = '0';
     canvas.style.left = '0';
-    canvas.style.width = `${CANVAS_MIN_W}px`;
-    canvas.style.height = `${CANVAS_MIN_H}px`;
+    canvas.style.width = '400px';
+    canvas.style.height = '600px';
     canvas.style.transformOrigin = '0 0';
     canvas.style.willChange = 'transform';
 
     const zoomBox = h('div', { class: 'board-zoom' }, canvas);
     zoomBox.style.position = 'relative';
-    zoomBox.style.width = `${CANVAS_MIN_W * zoom}px`;
-    zoomBox.style.height = `${CANVAS_MIN_H * zoom}px`;
 
     const scroll = h('div', { class: 'board-scroll' }, zoomBox);
     const emptyHint = h('p', { class: 'board-empty' }, 'Нажмите на доску, чтобы начать исследование');
@@ -359,25 +357,25 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         let maxY = 0;
         if (graph) {
             for (const node of graph.nodes.values()) {
-                if (node.x + NOTE_MAX_W / 2 > maxX) maxX = node.x + NOTE_MAX_W / 2;
-                if (node.y + NOTE_H > maxY) maxY = node.y + NOTE_H;
+                const r = node.x + NOTE_MAX_W / 2;
+                const b = node.y + NOTE_H;
+                if (r > maxX) maxX = r;
+                if (b > maxY) maxY = b;
             }
         }
-        const vw = scroll.clientWidth || 0;
-        const vh = scroll.clientHeight || 0;
-        const w = Math.max(CANVAS_MIN_W, Math.ceil(vw / zoom), maxX + EDGE_PAD);
-        const h = Math.max(CANVAS_MIN_H, Math.ceil(vh / zoom), maxY + EDGE_PAD);
+        const vw = scroll.clientWidth || 400;
+        const vh = scroll.clientHeight || 600;
+        const w = Math.max(Math.ceil(vw / zoom), Math.ceil(maxX) + EDGE_PAD);
+        const h = Math.max(Math.ceil(vh / zoom), Math.ceil(maxY) + EDGE_PAD);
         return { w, h };
     }
 
     function bounds() {
-        const cw = parseFloat(canvas.style.width) || CANVAS_MIN_W;
-        const ch = parseFloat(canvas.style.height) || CANVAS_MIN_H;
         return {
             minX: NOTE_MAX_W / 2 + EDGE_PAD,
-            maxX: cw - NOTE_MAX_W / 2 - EDGE_PAD,
+            maxX: HARD_MAX_X,
             minY: EDGE_PAD,
-            maxY: ch - NOTE_H - EDGE_PAD,
+            maxY: HARD_MAX_Y,
         };
     }
 
@@ -499,7 +497,9 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
 
     function startFrom(entry) {
         const key = `${entry.table}:${entry.id}`;
-        const point = blank ?? { x: parseFloat(canvas.style.width) / 2, y: parseFloat(canvas.style.height) / 2 };
+        const cw = parseFloat(canvas.style.width) || 400;
+        const ch = parseFloat(canvas.style.height) || 600;
+        const point = blank ?? { x: Math.round(cw / 2), y: Math.round(ch / 2) };
         graph = {
             root: key,
             nodes: new Map([[key, { key, x: Math.round(point.x), y: Math.round(point.y), from: null }]]),
@@ -527,6 +527,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         blank = null;
         persist();
         draw();
+        applyZoom();
     }
 
     function buildMedia(entry) {
@@ -594,6 +595,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
                 noteEl.classList.remove('is-dragging');
                 canvas.classList.remove('is-dragging');
                 persist();
+                applyZoom();
             }
             drag = null;
         }
@@ -926,8 +928,8 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     );
 
     function centerView() {
-        const cw = parseFloat(canvas.style.width) || CANVAS_MIN_W;
-        const ch = parseFloat(canvas.style.height) || CANVAS_MIN_H;
+        const cw = parseFloat(canvas.style.width) || 400;
+        const ch = parseFloat(canvas.style.height) || 600;
         const root = graph ? graph.nodes.get(graph.root) : null;
         const rx = root ? root.x + NOTE_W / 2 : cw / 2;
         const ry = root ? root.y + NOTE_H / 2 : ch / 2;
@@ -944,7 +946,6 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         persist();
     }
     draw();
-    applyZoom();
     requestAnimationFrame(() => {
         fit();
         centerView();
