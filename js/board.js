@@ -28,8 +28,13 @@ const DRAG_THRESHOLD = 5;
 const WORLD_LABELS = { real: 'реальный мир', afterlife: 'посмертие' };
 
 let activeBoard = null;
+let pendingRedrawFrame = 0;
 
 export function destroyBoardView() {
+    if (pendingRedrawFrame) {
+        cancelAnimationFrame(pendingRedrawFrame);
+        pendingRedrawFrame = 0;
+    }
     activeBoard?.abort();
     activeBoard = null;
 }
@@ -200,6 +205,16 @@ export function createBoardView({ all, world, userId }, callbacks) {
 
     const scope = `${userId ?? 'guest'}:${world}`;
     const byKey = new Map(all.map((entry) => [`${entry.table}:${entry.id}`, entry]));
+
+    const backlinks = new Map();
+    for (const item of all) {
+        const itemKey = `${item.table}:${item.id}`;
+        for (const link of item.links ?? []) {
+            if (!backlinks.has(link)) backlinks.set(link, new Set());
+            backlinks.get(link).add(itemKey);
+        }
+    }
+
     const state = { pressTimer: null, pressX: 0, pressY: 0, longPressed: false, suppressClick: false };
     let graph = null;
     let blank = null;
@@ -246,9 +261,11 @@ export function createBoardView({ all, world, userId }, callbacks) {
         for (const target of entry.links ?? []) {
             if (target !== key && byKey.has(target)) result.add(target);
         }
-        for (const item of all) {
-            const itemKey = `${item.table}:${item.id}`;
-            if (itemKey !== key && (item.links ?? []).includes(key)) result.add(itemKey);
+        const backs = backlinks.get(key);
+        if (backs) {
+            for (const srcKey of backs) {
+                if (srcKey !== key && byKey.has(srcKey)) result.add(srcKey);
+            }
         }
         if (relationsMap?.has(key)) {
             for (const relKey of relationsMap.get(key)) {
@@ -260,12 +277,13 @@ export function createBoardView({ all, world, userId }, callbacks) {
 
     function recomputeEdges(targetGraph = graph) {
         if (!targetGraph) return;
-        targetGraph.edges = new Set();
+        const next = new Set();
         for (const key of targetGraph.nodes.keys()) {
             for (const neighbor of neighborKeys(key)) {
-                if (targetGraph.nodes.has(neighbor)) targetGraph.edges.add(edgeKey(key, neighbor));
+                if (targetGraph.nodes.has(neighbor)) next.add(edgeKey(key, neighbor));
             }
         }
+        targetGraph.edges = next;
     }
 
     function hydrate(saved) {
@@ -275,15 +293,16 @@ export function createBoardView({ all, world, userId }, callbacks) {
             if (byKey.has(node.key)) nodes.set(node.key, { key: node.key, x: node.x, y: node.y, from: node.from ?? null });
         }
         if (!nodes.has(saved.root)) return null;
-        const result = {
+        const edges = new Set();
+        for (const [a, b] of saved.edges) {
+            if (nodes.has(a) && nodes.has(b)) edges.add(edgeKey(a, b));
+        }
+        return {
             root: saved.root,
             nodes,
-            edges: new Set(),
+            edges,
             explored: new Set(saved.explored.filter((key) => nodes.has(key))),
         };
-        recomputeEdges(result);
-        pruneUnreachable(result);
-        return result;
     }
 
     function persist() {
@@ -310,12 +329,15 @@ export function createBoardView({ all, world, userId }, callbacks) {
         };
     }
 
-    function clampPoint(point) {
-        const limit = bounds();
+    function clampWithBounds(point, limit) {
         return {
             x: Math.min(limit.maxX, Math.max(limit.minX, point.x)),
             y: Math.min(limit.maxY, Math.max(limit.minY, point.y)),
         };
+    }
+
+    function clampPoint(point) {
+        return clampWithBounds(point, bounds());
     }
 
     function overlaps(point, others) {
@@ -335,6 +357,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
             : -Math.PI / 2;
         const spread = keys.length > 1 ? (isFull ? Math.PI * 2 : Math.PI * 1.4) : 0;
         const placed = [...graph.nodes.values()];
+        const limit = bounds();
 
         const radii = [300, 360, 430, 510, 600, 700, 820];
         const turns = [0, 0.18, -0.18, 0.35, -0.35, 0.52, -0.52, 0.7, -0.7, 0.88, -0.88, 1.05, -1.05];
@@ -349,10 +372,10 @@ export function createBoardView({ all, world, userId }, callbacks) {
             outer: for (const radius of radii) {
                 for (const turn of turns) {
                     const angle = idealAngle + turn;
-                    const candidate = clampPoint({
+                    const candidate = clampWithBounds({
                         x: parent.x + Math.cos(angle) * radius,
                         y: parent.y + Math.sin(angle) * radius,
-                    });
+                    }, limit);
                     if (!overlaps(candidate, placed)) {
                         spot = candidate;
                         break outer;
@@ -364,20 +387,20 @@ export function createBoardView({ all, world, userId }, callbacks) {
                 for (let radius = 300; radius < 1000 && !spot; radius += 50) {
                     for (let step = 0; step < 24 && !spot; step++) {
                         const angle = (step / 24) * Math.PI * 2;
-                        const candidate = clampPoint({
+                        const candidate = clampWithBounds({
                             x: parent.x + Math.cos(angle) * radius,
                             y: parent.y + Math.sin(angle) * radius,
-                        });
+                        }, limit);
                         if (!overlaps(candidate, placed)) spot = candidate;
                     }
                 }
             }
 
             if (!spot) {
-                spot = clampPoint({
+                spot = clampWithBounds({
                     x: parent.x + Math.cos(idealAngle) * 340,
                     y: parent.y + Math.sin(idealAngle) * 340,
-                });
+                }, limit);
             }
 
             const node = { key, x: Math.round(spot.x), y: Math.round(spot.y), from: parent.key };
@@ -480,21 +503,20 @@ export function createBoardView({ all, world, userId }, callbacks) {
                 const rect = noteEl.getBoundingClientRect();
                 drag.offsetX = drag.startX - (rect.left + rect.width / 2);
                 drag.offsetY = drag.startY - rect.top;
+                drag.canvasRect = canvas.getBoundingClientRect();
+                drag.limit = bounds();
             }
 
-            event.preventDefault();
-            const canvasRect = canvas.getBoundingClientRect();
-            const halfW = canvasRect.width / 2;
-            const halfH = canvasRect.height / 2;
-            const next = clampPoint({
-                x: event.clientX - canvasRect.left - halfW - drag.offsetX,
-                y: event.clientY - canvasRect.top - halfH - drag.offsetY,
-            });
-            node.x = next.x;
-            node.y = next.y;
+            const next = {
+                x: event.clientX - drag.canvasRect.left - drag.canvasRect.width / 2 - drag.offsetX,
+                y: event.clientY - drag.canvasRect.top - drag.canvasRect.height / 2 - drag.offsetY,
+            };
+            const clamped = clampWithBounds(next, drag.limit);
+            node.x = clamped.x;
+            node.y = clamped.y;
             noteEl.style.left = `calc(50% + ${node.x}px)`;
             noteEl.style.top = `calc(50% + ${node.y}px)`;
-            redrawThreads();
+            scheduleRedraw();
         }
 
         function onUp() {
@@ -516,7 +538,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
                 node.y = drag.originalY;
                 noteEl.style.left = `calc(50% + ${node.x}px)`;
                 noteEl.style.top = `calc(50% + ${node.y}px)`;
-                redrawThreads();
+                scheduleRedraw();
                 noteEl.classList.remove('is-dragging');
                 canvas.classList.remove('is-dragging');
             }
@@ -534,6 +556,8 @@ export function createBoardView({ all, world, userId }, callbacks) {
                 offsetY: 0,
                 originalX: node.x,
                 originalY: node.y,
+                canvasRect: null,
+                limit: null,
                 active: false,
             };
 
@@ -548,7 +572,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
                 }, LONG_PRESS_MS);
             }
 
-            window.addEventListener('pointermove', onMove, { passive: false });
+            window.addEventListener('pointermove', onMove, { passive: true });
             window.addEventListener('pointerup', onUp);
             window.addEventListener('pointercancel', onCancel);
         });
@@ -608,23 +632,43 @@ export function createBoardView({ all, world, userId }, callbacks) {
         );
     }
 
+    function scheduleRedraw() {
+        if (pendingRedrawFrame) return;
+        pendingRedrawFrame = requestAnimationFrame(() => {
+            pendingRedrawFrame = 0;
+            redrawThreads();
+        });
+    }
+
     function redrawThreads() {
         if (!graph) {
-            threads.replaceChildren();
+            if (threads.childNodes.length) threads.replaceChildren();
             return;
         }
-        const layers = [];
-        for (const edge of graph.edges) {
-            const [from, to] = edge.split('|').map((key) => graph.nodes.get(key));
-            if (!from || !to) continue;
-            const d = threadPath(from, to);
-            layers.push(
-                svgEl('path', { d, class: 'board-thread-shadow', transform: 'translate(2 3)' }),
-                svgEl('path', { d, class: 'board-thread' }),
-                svgEl('path', { d, class: 'board-thread-hi' })
+        const edges = [...graph.edges];
+        const needed = edges.length * 3;
+        const parent = threads;
+
+        while (parent.childNodes.length > needed) parent.removeChild(parent.lastChild);
+        while (parent.childNodes.length < needed) {
+            parent.append(
+                svgEl('path', { class: 'board-thread-shadow', transform: 'translate(2 3)' }),
+                svgEl('path', { class: 'board-thread' }),
+                svgEl('path', { class: 'board-thread-hi' })
             );
         }
-        threads.replaceChildren(...layers);
+
+        const children = parent.childNodes;
+        for (let i = 0; i < edges.length; i += 1) {
+            const [fromKey, toKey] = edges[i].split('|');
+            const from = graph.nodes.get(fromKey);
+            const to = graph.nodes.get(toKey);
+            if (!from || !to) continue;
+            const d = threadPath(from, to);
+            children[i * 3].setAttribute('d', d);
+            children[i * 3 + 1].setAttribute('d', d);
+            children[i * 3 + 2].setAttribute('d', d);
+        }
     }
 
     function draw() {
@@ -787,15 +831,19 @@ export function createBoardView({ all, world, userId }, callbacks) {
     signal.addEventListener('abort', () => observer.disconnect());
     window.addEventListener('resize', fit, { signal });
 
+    graph = hydrate(readSaved(scope));
+    draw();
+    requestAnimationFrame(() => {
+        fit();
+        syncViewBox();
+        centerView();
+    });
+
     relationsReady.then(() => {
-        if (signal.aborted) return;
-        graph = hydrate(readSaved(scope));
-        draw();
-        requestAnimationFrame(() => {
-            fit();
-            syncViewBox();
-            centerView();
-        });
+        if (signal.aborted || !graph) return;
+        recomputeEdges();
+        redrawThreads();
+        persist();
     });
 
     return board;
