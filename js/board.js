@@ -16,13 +16,14 @@ const TYPE_ICONS = {
 const BLANK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>';
 
 const STORAGE_PREFIX = 'board:';
+const STORAGE_VERSION = 2;
 const NOTE_W = 190;
 const NOTE_H = 260;
 const NOTE_MAX_W = 288;
 const GAP = 24;
 const EDGE_PAD = 40;
-const CANVAS_W = 1600;
-const CANVAS_H = 1100;
+const CANVAS_MIN_W = 3000;
+const CANVAS_MIN_H = 2000;
 const LONG_PRESS_MS = 550;
 const MOVE_CANCEL = 10;
 const DRAG_THRESHOLD = 5;
@@ -61,7 +62,8 @@ function edgeKey(a, b) {
 function readSaved(scope) {
     try {
         const raw = JSON.parse(localStorage.getItem(STORAGE_PREFIX + scope) || 'null');
-        if (!raw || typeof raw.root !== 'string' || !Array.isArray(raw.nodes)) return null;
+        if (!raw || raw.version !== STORAGE_VERSION) return null;
+        if (typeof raw.root !== 'string' || !Array.isArray(raw.nodes)) return null;
         return {
             root: raw.root,
             nodes: raw.nodes.filter((node) => typeof node.key === 'string' && Number.isFinite(node.x) && Number.isFinite(node.y)),
@@ -76,7 +78,7 @@ function readSaved(scope) {
 
 function writeSaved(scope, value) {
     try {
-        if (value) localStorage.setItem(STORAGE_PREFIX + scope, JSON.stringify(value));
+        if (value) localStorage.setItem(STORAGE_PREFIX + scope, JSON.stringify({ ...value, version: STORAGE_VERSION }));
         else localStorage.removeItem(STORAGE_PREFIX + scope);
     } catch {
         return;
@@ -245,14 +247,15 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     canvas.style.position = 'absolute';
     canvas.style.top = '0';
     canvas.style.left = '0';
-    canvas.style.width = `${CANVAS_W}px`;
-    canvas.style.height = `${CANVAS_H}px`;
+    canvas.style.width = `${CANVAS_MIN_W}px`;
+    canvas.style.height = `${CANVAS_MIN_H}px`;
     canvas.style.transformOrigin = '0 0';
     canvas.style.willChange = 'transform';
-    canvas.style.touchAction = 'pan-x pan-y';
 
     const zoomBox = h('div', { class: 'board-zoom' }, canvas);
     zoomBox.style.position = 'relative';
+    zoomBox.style.width = `${CANVAS_MIN_W * zoom}px`;
+    zoomBox.style.height = `${CANVAS_MIN_H * zoom}px`;
 
     const scroll = h('div', { class: 'board-scroll' }, zoomBox);
     const emptyHint = h('p', { class: 'board-empty' }, 'Нажмите на доску, чтобы начать исследование');
@@ -351,14 +354,30 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         });
     }
 
+    function canvasSize() {
+        let maxX = 0;
+        let maxY = 0;
+        if (graph) {
+            for (const node of graph.nodes.values()) {
+                if (node.x + NOTE_MAX_W / 2 > maxX) maxX = node.x + NOTE_MAX_W / 2;
+                if (node.y + NOTE_H > maxY) maxY = node.y + NOTE_H;
+            }
+        }
+        const vw = scroll.clientWidth || 0;
+        const vh = scroll.clientHeight || 0;
+        const w = Math.max(CANVAS_MIN_W, Math.ceil(vw / zoom), maxX + EDGE_PAD);
+        const h = Math.max(CANVAS_MIN_H, Math.ceil(vh / zoom), maxY + EDGE_PAD);
+        return { w, h };
+    }
+
     function bounds() {
-        const halfW = CANVAS_W / 2;
-        const halfH = CANVAS_H / 2;
+        const cw = parseFloat(canvas.style.width) || CANVAS_MIN_W;
+        const ch = parseFloat(canvas.style.height) || CANVAS_MIN_H;
         return {
-            minX: -halfW + NOTE_MAX_W / 2 + EDGE_PAD,
-            maxX: halfW - NOTE_MAX_W / 2 - EDGE_PAD,
-            minY: -halfH + EDGE_PAD,
-            maxY: halfH - NOTE_H - EDGE_PAD,
+            minX: NOTE_MAX_W / 2 + EDGE_PAD,
+            maxX: cw - NOTE_MAX_W / 2 - EDGE_PAD,
+            minY: EDGE_PAD,
+            maxY: ch - NOTE_H - EDGE_PAD,
         };
     }
 
@@ -383,6 +402,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
 
     function placeAround(parent, keys) {
         if (!keys.length) return;
+        const limit = bounds();
         const fromNode = parent.from ? graph.nodes.get(parent.from) : null;
         const isFull = !fromNode || parent.key === graph.root;
         const baseAngle = fromNode
@@ -390,7 +410,6 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
             : -Math.PI / 2;
         const spread = keys.length > 1 ? (isFull ? Math.PI * 2 : Math.PI * 1.4) : 0;
         const placed = [...graph.nodes.values()];
-        const limit = bounds();
 
         const radii = [300, 360, 430, 510, 600, 700, 820];
         const turns = [0, 0.18, -0.18, 0.35, -0.35, 0.52, -0.52, 0.7, -0.7, 0.88, -0.88, 1.05, -1.05];
@@ -480,7 +499,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
 
     function startFrom(entry) {
         const key = `${entry.table}:${entry.id}`;
-        const point = blank ?? { x: 0, y: 0 };
+        const point = blank ?? { x: parseFloat(canvas.style.width) / 2, y: parseFloat(canvas.style.height) / 2 };
         graph = {
             root: key,
             nodes: new Map([[key, { key, x: Math.round(point.x), y: Math.round(point.y), from: null }]]),
@@ -551,22 +570,19 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
                 drag.active = true;
                 noteEl.classList.add('is-dragging');
                 canvas.classList.add('is-dragging');
-                const rect = noteEl.getBoundingClientRect();
-                drag.offsetX = drag.startX - (rect.left + rect.width / 2);
-                drag.offsetY = drag.startY - rect.top;
                 drag.canvasRect = canvas.getBoundingClientRect();
                 drag.limit = bounds();
             }
 
             const next = {
-                x: (event.clientX - drag.canvasRect.left - drag.canvasRect.width / 2 - drag.offsetX) / zoom,
-                y: (event.clientY - drag.canvasRect.top - drag.canvasRect.height / 2 - drag.offsetY) / zoom,
+                x: (event.clientX - drag.canvasRect.left) / zoom,
+                y: (event.clientY - drag.canvasRect.top) / zoom,
             };
             const clamped = clampWithBounds(next, drag.limit);
             node.x = clamped.x;
             node.y = clamped.y;
-            noteEl.style.left = `calc(50% + ${node.x}px)`;
-            noteEl.style.top = `calc(50% + ${node.y}px)`;
+            noteEl.style.left = `${node.x}px`;
+            noteEl.style.top = `${node.y}px`;
             scheduleRedraw();
         }
 
@@ -587,8 +603,8 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
             if (drag?.active) {
                 node.x = drag.originalX;
                 node.y = drag.originalY;
-                noteEl.style.left = `calc(50% + ${node.x}px)`;
-                noteEl.style.top = `calc(50% + ${node.y}px)`;
+                noteEl.style.left = `${node.x}px`;
+                noteEl.style.top = `${node.y}px`;
                 scheduleRedraw();
                 noteEl.classList.remove('is-dragging');
                 canvas.classList.remove('is-dragging');
@@ -603,8 +619,6 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
             drag = {
                 startX: event.clientX,
                 startY: event.clientY,
-                offsetX: 0,
-                offsetY: 0,
                 originalX: node.x,
                 originalY: node.y,
                 canvasRect: null,
@@ -644,7 +658,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
                 role: 'button',
                 tabindex: '0',
                 'aria-label': `${kind}: ${entry.name}`,
-                style: `left: calc(50% + ${node.x}px); top: calc(50% + ${node.y}px); --tilt: ${tilt}deg;`,
+                style: `left: ${node.x}px; top: ${node.y}px; --tilt: ${tilt}deg;`,
             },
             h('span', { class: 'board-pin', 'data-table': entry.table }),
             buildMedia(entry),
@@ -663,7 +677,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
             'div',
             {
                 class: 'board-note is-blank paper-0 style-plain',
-                style: `left: calc(50% + ${blank.x}px); top: calc(50% + ${blank.y}px); --tilt: -1.5deg;`,
+                style: `left: ${blank.x}px; top: ${blank.y}px; --tilt: -1.5deg;`,
             },
             h('span', { class: 'board-pin' }),
             blankIcon,
@@ -715,7 +729,10 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
             const from = graph.nodes.get(fromKey);
             const to = graph.nodes.get(toKey);
             if (!from || !to) continue;
-            const d = threadPath(from, to);
+            const d = threadPath(
+                { x: from.x, y: from.y + NOTE_H / 2 },
+                { x: to.x, y: to.y + NOTE_H / 2 }
+            );
             children[i * 3].setAttribute('d', d);
             children[i * 3 + 1].setAttribute('d', d);
             children[i * 3 + 2].setAttribute('d', d);
@@ -775,8 +792,12 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         if (graph) openMenu(x, y, [{ label: 'Сбросить доску', tone: 'warning', run: resetBoard }]);
     }
 
-    function pointFromEvent(event) {
-        return canvasPoint(event.clientX, event.clientY);
+    function canvasPoint(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: (clientX - rect.left) / zoom,
+            y: (clientY - rect.top) / zoom,
+        };
     }
 
     function clearPress() {
@@ -796,7 +817,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
             return;
         }
         if (!graph) {
-            blank = clampPoint(pointFromEvent(event));
+            blank = clampPoint(canvasPoint(event.clientX, event.clientY));
             draw();
         }
     });
@@ -855,10 +876,14 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         { signal }
     );
 
-    function syncViewBox() {
-        const width = CANVAS_W;
-        const height = CANVAS_H;
-        threads.setAttribute('viewBox', `${-width / 2} ${-height / 2} ${width} ${height}`);
+    function applyZoom() {
+        const { w, h } = canvasSize();
+        canvas.style.width = `${w}px`;
+        canvas.style.height = `${h}px`;
+        canvas.style.transform = `scale(${zoom})`;
+        zoomBox.style.width = `${Math.round(w * zoom)}px`;
+        zoomBox.style.height = `${Math.round(h * zoom)}px`;
+        threads.setAttribute('viewBox', `0 0 ${w} ${h}`);
     }
 
     function fit() {
@@ -869,33 +894,19 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         applyZoom();
     }
 
-    function applyZoom() {
-        canvas.style.width = `${CANVAS_W}px`;
-        canvas.style.height = `${CANVAS_H}px`;
-        canvas.style.transform = `scale(${zoom})`;
-        zoomBox.style.width = `${Math.round(CANVAS_W * zoom)}px`;
-        zoomBox.style.height = `${Math.round(CANVAS_H * zoom)}px`;
-    }
-
-    function canvasPoint(clientX, clientY) {
-        const rect = canvas.getBoundingClientRect();
-        return {
-            x: (clientX - rect.left) / zoom - CANVAS_W / 2,
-            y: (clientY - rect.top) / zoom - CANVAS_H / 2,
-        };
-    }
-
     function setZoom(next, clientX, clientY) {
         const target = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
         if (Math.abs(target - zoom) < 0.001) return;
         const view = scroll.getBoundingClientRect();
         const originX = clientX ?? view.left + view.width / 2;
         const originY = clientY ?? view.top + view.height / 2;
-        const anchor = canvasPoint(originX, originY);
+        const anchorX = (originX - view.left + scroll.scrollLeft) / zoom;
+        const anchorY = (originY - view.top + scroll.scrollTop) / zoom;
         zoom = target;
         applyZoom();
-        scroll.scrollLeft = (CANVAS_W / 2 + anchor.x) * zoom - (originX - view.left);
-        scroll.scrollTop = (CANVAS_H / 2 + anchor.y) * zoom - (originY - view.top);
+        void scroll.offsetHeight;
+        scroll.scrollLeft = anchorX * zoom - (originX - view.left);
+        scroll.scrollTop = anchorY * zoom - (originY - view.top);
         closeMenu();
         try {
             localStorage.setItem('boardZoom', String(zoom));
@@ -915,16 +926,15 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     );
 
     function centerView() {
+        const cw = parseFloat(canvas.style.width) || CANVAS_MIN_W;
+        const ch = parseFloat(canvas.style.height) || CANVAS_MIN_H;
         const root = graph ? graph.nodes.get(graph.root) : null;
-        const targetX = (CANVAS_W / 2 + (root ? root.x : 0)) * zoom;
-        const targetY = (CANVAS_H / 2 + (root ? root.y + NOTE_H / 2 : 0)) * zoom;
-        scroll.scrollLeft = targetX - scroll.clientWidth / 2;
-        scroll.scrollTop = targetY - scroll.clientHeight / 2;
+        const rx = root ? root.x + NOTE_W / 2 : cw / 2;
+        const ry = root ? root.y + NOTE_H / 2 : ch / 2;
+        scroll.scrollLeft = rx * zoom - scroll.clientWidth / 2;
+        scroll.scrollTop = ry * zoom - scroll.clientHeight / 2;
     }
 
-    const observer = new ResizeObserver(syncViewBox);
-    observer.observe(canvas);
-    signal.addEventListener('abort', () => observer.disconnect());
     window.addEventListener('resize', fit, { signal });
 
     graph = hydrate(readSaved(scope));
@@ -934,9 +944,9 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         persist();
     }
     draw();
+    applyZoom();
     requestAnimationFrame(() => {
         fit();
-        syncViewBox();
         centerView();
     });
 
