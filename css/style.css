@@ -956,17 +956,17 @@ body[data-world="afterlife"] #entry-form-message.is-success { color: #f2a6c2; }
     }
 }
 
-@media (max-width: 40rem) {
+@media (max-width: 48rem) {
     .tabs {
         position: fixed;
         right: 0;
-        bottom: 0;
+        bottom: env(safe-area-inset-bottom, 0px);
         left: 0;
         z-index: 20;
         gap: 0;
         max-width: none;
         margin: 0;
-        padding: 0 0 env(safe-area-inset-bottom);
+        padding: 0;
         border-top: 1px solid var(--line);
         border-bottom: 0;
         background: var(--surface);
@@ -980,12 +980,15 @@ body[data-world="afterlife"] #entry-form-message.is-success { color: #f2a6c2; }
         font-size: 0.85rem;
     }
     .tabs button[aria-current="page"] { border-top-color: var(--accent); }
-    main { padding-bottom: 6rem; }
+    main { padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
+}
+
+@media (max-width: 40rem) {
     .segmented button { padding: 0.45rem 0.8rem; }
     #auth-form input[type="email"],
     #auth-form input[type="password"] { width: 100%; }
     #auth-form { width: 100%; }
-    .floating-add { bottom: 5rem; }
+    .floating-add { bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
