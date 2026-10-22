@@ -1940,28 +1940,16 @@ body[data-world="afterlife"] .details-lock {
 
 /* ===== Доска: оптимизация производительности ===== */
 
-/* Доска — отдельный стековый контекст: всё внутри неё гарантированно ниже бланка */
-.board {
-  isolation: isolate;
-  z-index: 0;
-}
-
-/* Нити в собственном слое: при перетаскивании не перерисовывается пробка и листки */
-.board-threads { will-change: transform; }
-
-/* Бланк просмотра принудительно держится в своём слое поверх доски */
-.sheet {
-  z-index: 30;
-  transform: translateZ(0);
-  will-change: transform;
-  backface-visibility: hidden;
-}
+/* Нити в собственном слое отключены: лишний слой над большим полотном на телефоне только вредит */
 
 /* Во время перетаскивания листок выносится в отдельный слой */
 .board-note.is-dragging { will-change: translate; }
 
-/* Тач-устройства: без переходов, без «залипающего» hover и без тяжёлых теней */
+/* Тач-устройства */
 @media (pointer: coarse) {
+  /* Заклёпки в углах — полноразмерный слой поверх доски, на телефоне его убираем */
+  body[data-world="real"] .board::after { display: none; }
+
   .board-note {
     transition: none;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
@@ -1980,10 +1968,4 @@ body[data-world="afterlife"] .details-lock {
   body[data-world="afterlife"] .board-note.is-dragging {
     box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
   }
-}
-
-/* Телефон: на вкладке «Доска» бланк появляется без анимации выезда,
-   чтобы не конфликтовать с композитингом доски */
-@media (max-width: 48rem) {
-  body[data-tab="board"] .sheet { animation: none; }
 }

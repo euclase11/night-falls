@@ -249,7 +249,6 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     }
 
     const threads = svgEl('svg', { class: 'board-threads', preserveAspectRatio: 'none', 'aria-hidden': 'true' });
-    threads.style.willChange = 'transform';
     const canvas = h('div', { class: 'board-canvas' }, threads);
     canvas.style.position = 'absolute';
     canvas.style.top = '0';
@@ -257,7 +256,6 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     canvas.style.width = '400px';
     canvas.style.height = '600px';
     canvas.style.transformOrigin = '0 0';
-    canvas.style.willChange = 'transform';
 
     const zoomBox = h('div', { class: 'board-zoom' }, canvas);
     zoomBox.style.position = 'relative';
