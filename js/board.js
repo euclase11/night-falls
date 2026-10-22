@@ -240,8 +240,15 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
 
     const threads = svgEl('svg', { class: 'board-threads', preserveAspectRatio: 'none', 'aria-hidden': 'true' });
     const canvas = h('div', { class: 'board-canvas' }, threads);
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
     canvas.style.transformOrigin = '0 0';
+    canvas.style.willChange = 'transform';
+
     const zoomBox = h('div', { class: 'board-zoom' }, canvas);
+    zoomBox.style.position = 'relative';
+
     const scroll = h('div', { class: 'board-scroll' }, zoomBox);
     const emptyHint = h('p', { class: 'board-empty' }, 'Нажмите на доску, чтобы начать исследование');
     const toastEl = h('div', { class: 'board-toast', role: 'status' });
@@ -860,7 +867,6 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
     function applyZoom() {
         const width = Math.max(1600, Math.ceil(scroll.clientWidth / zoom));
         const height = Math.max(1100, Math.ceil(scroll.clientHeight / zoom));
-        canvas.style.transformOrigin = '0 0';
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
         canvas.style.transform = `scale(${zoom})`;
