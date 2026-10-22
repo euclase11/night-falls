@@ -1448,7 +1448,9 @@ body[data-world="real"] .board::after {
 
 .board-note {
     position: absolute;
-    width: 10.5rem;
+    width: max-content;
+    min-width: 10.5rem;
+    max-width: 18rem;
     padding: 1.1rem 0.75rem 0.8rem;
     border-radius: 2px;
     background-color: var(--paper-a);
@@ -1460,6 +1462,12 @@ body[data-world="real"] .board::after {
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     touch-action: none;
     cursor: grab;
+}
+
+.board-note h3,
+.board-note p {
+    width: 0;
+    min-width: 100%;
 }
 
 .board-note.is-dragging {
@@ -1513,7 +1521,7 @@ body[data-world="afterlife"] .board-note.is-dragging {
 }
 
 .board-note.is-root {
-    width: 11.5rem;
+    min-width: 11.5rem;
 }
 
 .board-pin {
@@ -1523,25 +1531,68 @@ body[data-world="afterlife"] .board-note.is-dragging {
     z-index: 2;
     width: 1.15rem;
     height: 1.15rem;
-    background: var(--pin-color, var(--pin));
-    box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.55),
-        inset 0 1px 0 rgba(255, 255, 255, 0.35),
-        inset 0 -2px 3px rgba(0, 0, 0, 0.35);
+    border-radius: 50%;
+    background: radial-gradient(
+        circle at 35% 30%,
+        var(--pin-color-hi, var(--pin-hi)),
+        var(--pin-color, var(--pin)) 55%,
+        var(--pin-color-lo, var(--pin-lo))
+    );
+    box-shadow: 0 3px 4px rgba(0, 0, 0, 0.45);
     transform: translate(-50%, -50%);
 }
 
-body[data-world="real"] .board-pin[data-table="characters"] { --pin-color: #4a7c59; border-radius: 50%; }
-body[data-world="real"] .board-pin[data-table="settlements"] { --pin-color: #d47a2a; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
-body[data-world="real"] .board-pin[data-table="events"] { --pin-color: #b7384a; border-radius: 4px; }
-body[data-world="real"] .board-pin[data-table="misc"] { --pin-color: #5c6b7a; clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%); }
-body[data-world="real"] .board-pin[data-table="gallery"] { --pin-color: #a0476b; clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+body[data-world="real"] .board-pin[data-table="characters"] {
+    --pin-color-hi: #e8b878;
+    --pin-color: #c98c4a;
+    --pin-color-lo: #6b4a1c;
+}
+body[data-world="real"] .board-pin[data-table="settlements"] {
+    --pin-color-hi: #ebc960;
+    --pin-color: #d4a82a;
+    --pin-color-lo: #6b510f;
+}
+body[data-world="real"] .board-pin[data-table="events"] {
+    --pin-color-hi: #d4705a;
+    --pin-color: #a03e2d;
+    --pin-color-lo: #4a1010;
+}
+body[data-world="real"] .board-pin[data-table="misc"] {
+    --pin-color-hi: #b8b8b8;
+    --pin-color: #7a7a7a;
+    --pin-color-lo: #3a3a3a;
+}
+body[data-world="real"] .board-pin[data-table="gallery"] {
+    --pin-color-hi: #c8a880;
+    --pin-color: #8b6f47;
+    --pin-color-lo: #4a3520;
+}
 
-body[data-world="afterlife"] .board-pin[data-table="characters"] { --pin-color: #8ab89a; border-radius: 50%; }
-body[data-world="afterlife"] .board-pin[data-table="settlements"] { --pin-color: #e0a06a; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
-body[data-world="afterlife"] .board-pin[data-table="events"] { --pin-color: #c46b7e; border-radius: 4px; }
-body[data-world="afterlife"] .board-pin[data-table="misc"] { --pin-color: #8a97a8; clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%); }
-body[data-world="afterlife"] .board-pin[data-table="gallery"] { --pin-color: #c4819b; clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+body[data-world="afterlife"] .board-pin[data-table="characters"] {
+    --pin-color-hi: #f4d8e0;
+    --pin-color: #d4a0b0;
+    --pin-color-lo: #7a4050;
+}
+body[data-world="afterlife"] .board-pin[data-table="settlements"] {
+    --pin-color-hi: #fae6b8;
+    --pin-color: #e8c890;
+    --pin-color-lo: #8a6b3a;
+}
+body[data-world="afterlife"] .board-pin[data-table="events"] {
+    --pin-color-hi: #d890a8;
+    --pin-color: #a0506a;
+    --pin-color-lo: #5a2030;
+}
+body[data-world="afterlife"] .board-pin[data-table="misc"] {
+    --pin-color-hi: #d8d0e6;
+    --pin-color: #b0a0c0;
+    --pin-color-lo: #5a4a6a;
+}
+body[data-world="afterlife"] .board-pin[data-table="gallery"] {
+    --pin-color-hi: #e6c0a8;
+    --pin-color: #c08a70;
+    --pin-color-lo: #6a3a20;
+}
 
 .board-note.is-root .board-pin {
     width: 1.4rem;
@@ -1598,9 +1649,9 @@ body[data-world="afterlife"] .board-note-media.is-icon[data-table="gallery"] { -
     font-size: 0.68rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    overflow-wrap: anywhere;
-    word-break: break-word;
     line-height: 1.2;
+    white-space: nowrap;
+    overflow-wrap: break-word;
 }
 
 .board-note h3 {
@@ -1629,6 +1680,7 @@ body[data-world="afterlife"] .board-note-media.is-icon[data-table="gallery"] { -
     flex-direction: column;
     align-items: center;
     gap: 0.55rem;
+    width: 11rem;
     min-height: 9rem;
     padding: 1.7rem 0.75rem 1.1rem;
     cursor: default;
@@ -1774,8 +1826,9 @@ body[data-world="afterlife"] .board-explore:hover {
 .board-picker-toggle input { accent-color: var(--accent); }
 
 @media (max-width: 40rem) {
-    .board-note { width: 9.5rem; }
-    .board-note.is-root { width: 10.5rem; }
+    .board-note { min-width: 9.5rem; max-width: 15rem; }
+    .board-note.is-root { min-width: 10.5rem; }
+    .board-note.is-blank { width: 9.5rem; }
     body[data-tab="board"] main { padding-bottom: 0; }
     body[data-world] .tabs button {
         padding-inline: 0.1rem;

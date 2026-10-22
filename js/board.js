@@ -19,6 +19,7 @@ const BLANK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const STORAGE_PREFIX = 'board:';
 const NOTE_W = 190;
 const NOTE_H = 260;
+const NOTE_MAX_W = 288;
 const GAP = 24;
 const EDGE_PAD = 40;
 const LONG_PRESS_MS = 550;
@@ -302,8 +303,8 @@ export function createBoardView({ all, world, userId }, callbacks) {
         const halfW = Math.max(canvas.clientWidth, 1600) / 2;
         const halfH = Math.max(canvas.clientHeight, 1100) / 2;
         return {
-            minX: -halfW + NOTE_W / 2 + EDGE_PAD,
-            maxX: halfW - NOTE_W / 2 - EDGE_PAD,
+            minX: -halfW + NOTE_MAX_W / 2 + EDGE_PAD,
+            maxX: halfW - NOTE_MAX_W / 2 - EDGE_PAD,
             minY: -halfH + EDGE_PAD,
             maxY: halfH - NOTE_H - EDGE_PAD,
         };
@@ -443,12 +444,13 @@ export function createBoardView({ all, world, userId }, callbacks) {
                 h('img', { src: entry.imageUrl, alt: '', loading: 'lazy', decoding: 'async' })
             );
         }
-        return h('div', {
+        const media = h('div', {
             class: 'board-note-media is-icon',
             'data-table': entry.table,
             'aria-hidden': 'true',
-            innerHTML: TYPE_ICONS[entry.table] ?? TYPE_ICONS.misc,
         });
+        media.innerHTML = TYPE_ICONS[entry.table] ?? TYPE_ICONS.misc;
+        return media;
     }
 
     function setupDrag(noteEl, node) {
@@ -580,6 +582,8 @@ export function createBoardView({ all, world, userId }, callbacks) {
     }
 
     function buildBlank() {
+        const blankIcon = h('span', { class: 'board-blank-icon', 'aria-hidden': 'true' });
+        blankIcon.innerHTML = BLANK_ICON_SVG;
         return h(
             'div',
             {
@@ -587,11 +591,7 @@ export function createBoardView({ all, world, userId }, callbacks) {
                 style: `left: calc(50% + ${blank.x}px); top: calc(50% + ${blank.y}px); --tilt: -1.5deg;`,
             },
             h('span', { class: 'board-pin' }),
-            h('span', {
-                class: 'board-blank-icon',
-                'aria-hidden': 'true',
-                innerHTML: BLANK_ICON_SVG,
-            }),
+            blankIcon,
             h('p', { class: 'board-blank-caption' }, 'С чего начать'),
             h(
                 'button',
