@@ -34,9 +34,17 @@
   <header class="top">
     <h1 class="title" id="site-title">наступает ночь</h1>
 
-    <div class="segmented" id="world-switch" role="group" aria-label="Мир">
-      <button type="button" data-world="real" aria-pressed="true">Реальный мир</button>
-      <button type="button" data-world="afterlife" aria-pressed="false">Посмертие</button>
+    <div class="top-mid">
+      <div class="segmented" id="world-switch" role="group" aria-label="Мир">
+        <button type="button" data-world="real" aria-pressed="true">Реальный мир</button>
+        <button type="button" data-world="afterlife" aria-pressed="false">Посмертие</button>
+      </div>
+
+      <div class="top-actions">
+        <button id="logout-btn" style="display:none;">Выйти</button>
+        <button type="button" id="help-btn" class="icon-btn help-btn" aria-label="Инструкция"
+          title="Инструкция">?</button>
+      </div>
     </div>
 
     <!-- Блок для входа/выхода редактора -->
@@ -47,11 +55,6 @@
         <button type="submit">Войти</button>
       </form>
       <p id="auth-message"></p>
-    </div>
-    <div class="top-actions">
-      <button id="logout-btn" style="display:none;">Выйти</button>
-      <button type="button" id="help-btn" class="icon-btn help-btn" aria-label="Инструкция"
-        title="Инструкция">?</button>
     </div>
   </header>
 

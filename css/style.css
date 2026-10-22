@@ -60,6 +60,10 @@ button { cursor: pointer; }
     padding: 1.25rem 1rem 0.75rem;
 }
 
+.top-mid {
+    display: contents;
+}
+
 .title {
     margin: 0;
     font-family: var(--font-display);
@@ -1157,38 +1161,47 @@ body[data-world="afterlife"] #entry-form-message.is-success { color: #f2a6c2; }
 
 @media (max-width: 40rem) {
     .top {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        grid-template-areas:
-            "title   title"
-            "switch  actions"
-            "auth    auth";
+        display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 0.5rem 0.75rem;
     }
     .title {
-        grid-area: title;
+        order: 1;
+        flex: 1 1 100%;
         font-size: clamp(1.35rem, 5vw, 1.6rem);
     }
-    #world-switch {
-        grid-area: switch;
-        justify-self: start;
+    .top-mid {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        order: 2;
+        flex: 1 1 100%;
         min-width: 0;
     }
+    #world-switch {
+        flex: 0 1 auto;
+        min-width: 0;
+        margin-right: auto;
+        overflow: hidden;
+    }
     #world-switch button {
-        padding: 0.4rem 0.7rem;
-        font-size: 0.82rem;
+        padding: 0.35rem 0.55rem;
+        font-size: 0.75rem;
+        white-space: nowrap;
     }
     .top-actions {
-        grid-area: actions;
-        justify-self: end;
+        flex: 0 0 auto;
     }
     #logout-btn {
-        padding: 0.35rem 0.8rem;
-        font-size: 0.85rem;
+        padding: 0.35rem 0.7rem;
+        font-size: 0.8rem;
     }
     #auth-container {
-        grid-area: auth;
+        order: 3;
+        flex: 1 1 100%;
         width: 100%;
     }
 }
