@@ -5,12 +5,21 @@ import { fuzzyRank } from './fuzzy.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-const TYPE_ICONS = {
-    characters: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-7 8-7s8 3 8 7"/></svg>',
-    settlements: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c-3-4.5-6-7.5-6-12a6 6 0 0 1 12 0c0 4.5-3 7.5-6 12z"/><circle cx="12" cy="10" r="2.2"/></svg>',
-    events: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18M8 15h2M14 15h2M8 18h2M14 18h2"/></svg>',
-    misc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M9 13h6M9 17h4"/></svg>',
-    gallery: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.6"/><path d="m21 15-4.5-4.5L6 21"/></svg>',
+const GLYPHS = {
+    real: {
+        characters: ['\uf21b', '\uf2c1', '\uf2c2', '\uf007'],
+        settlements: ['\uf1ad', '\uf0f7', '\uf015', '\uf041'],
+        events: ['\uf0e7', '\uf06d', '\uf1e2', '\uf071', '\uf254'],
+        misc: ['\uf0ad', '\uf085', '\uf013', '\uf1c0', '\uf0ea', '\uf2db', '\uf0c3'],
+        gallery: ['\uf03e', '\uf083'],
+    },
+    afterlife: {
+        characters: ['\uf2be', '\uf2bd', '\uf21d'],
+        settlements: ['\uf015', '\uf19c', '\uf277', '\uf018'],
+        events: ['\uf238', '\uf186', '\uf017', '\uf1da'],
+        misc: ['\uf02d', '\uf003', '\uf278', '\uf14e', '\uf06c', '\uf1bb'],
+        gallery: ['\uf03e', '\uf083'],
+    },
 };
 
 const BLANK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>';
@@ -537,7 +546,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         applyZoom();
     }
 
-    function buildMedia(entry) {
+    function buildMedia(entry, seed) {
         if (entry.imageUrl) {
             return h(
                 'div',
@@ -545,13 +554,13 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
                 h('img', { src: entry.imageUrl, alt: '', loading: 'lazy', decoding: 'async' })
             );
         }
-        const media = h('div', {
-            class: 'board-note-media is-icon',
-            'data-table': entry.table,
-            'aria-hidden': 'true',
-        });
-        media.innerHTML = TYPE_ICONS[entry.table] ?? TYPE_ICONS.misc;
-        return media;
+        const sets = GLYPHS[world] ?? GLYPHS.real;
+        const set = sets[entry.table] ?? sets.misc;
+        return h(
+            'div',
+            { class: 'board-note-media is-icon', 'data-table': entry.table, 'aria-hidden': 'true' },
+            h('span', { class: 'icon board-glyph' }, set[(seed >>> 7) % set.length])
+        );
     }
 
     /* ---------- Нити ---------- */
@@ -745,7 +754,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
                 style: `left: ${node.x}px; top: ${node.y}px; --tilt: ${tilt}deg;`,
             },
             h('span', { class: 'board-pin', 'data-table': entry.table }),
-            buildMedia(entry),
+            buildMedia(entry, seed),
             h('span', { class: 'board-note-kind' }, kind),
             h('h3', {}, entry.name),
             text ? h('p', {}, text) : null
@@ -790,6 +799,7 @@ export function createBoardView({ all, world, userId, relations }, callbacks) {
         rebuildThreads();
         if (blank) canvas.append(buildBlank());
         emptyHint.hidden = Boolean(graph || blank);
+        applyZoom();
     }
 
     function closeMenu() {
