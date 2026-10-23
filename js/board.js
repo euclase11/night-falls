@@ -17,7 +17,7 @@ const GLYPHS = {
         characters: ['\uf2be', '\uf2bd', '\uf21d'],
         settlements: ['\uf015', '\uf19c', '\uf277', '\uf018'],
         events: ['\uf238', '\uf186', '\uf017', '\uf1da'],
-        misc: ['\uf02d', '\uf0e0', '\uf15c', '\uf0f3', '\uf017', '\uf14e', '\uf0c1'],
+        misc: ['\uf02d', '\uf0e0', '\uf15c'],
         gallery: ['\uf03e', '\uf083'],
     },
 };
