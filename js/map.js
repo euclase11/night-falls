@@ -3,7 +3,7 @@ import { openForm } from './addEntry.js';
 import { supabase } from './supabase.js';
 
 const MIN_SCALE = 0.5;
-const MAX_SCALE = 4;
+const MAX_SCALE = 6;
 const ZOOM_STEP = 1.2;
 const DRAG_THRESHOLD = 8;
 const LONG_PRESS_MS = 600;
@@ -19,6 +19,26 @@ function renderDot(settlement) {
   const dot = h('span', { class: 'dot' }, String(settlement.number ?? ''));
   applyColor(dot, settlement.color);
   return dot;
+}
+
+function isPrimary(settlement) {
+  return /^\s*Подземн/i.test(String(settlement.description ?? ''));
+}
+
+function groupSettlements(settlements) {
+  const groups = new Map();
+  for (const settlement of settlements) {
+    const key = (settlement.color || '').trim().toLowerCase();
+    if (!groups.has(key)) groups.set(key, { color: settlement.color || null, items: [] });
+    groups.get(key).items.push(settlement);
+  }
+  const rank = (item) => item.number ?? 1e9;
+  const list = [...groups.values()];
+  for (const group of list) {
+    group.items.sort((a, b) => Number(isPrimary(b)) - Number(isPrimary(a)) || rank(a) - rank(b));
+  }
+  list.sort((a, b) => Math.min(...a.items.map(rank)) - Math.min(...b.items.map(rank)));
+  return list;
 }
 
 function distance(a, b) {
@@ -90,29 +110,49 @@ export function createMapView(settlements, settings, callbacks) {
   viewport.append(zoomControls);
 
   const legend = h(
-    'ul',
+    'div',
     { class: 'map-legend' },
-    settlements.map((s) =>
+    groupSettlements(settlements).map((group) =>
       h(
-        'li',
-        {},
+        'section',
+        {
+          class: 'legend-group',
+          style: `--group-color: ${/^#[0-9a-f]{3,8}$/i.test(group.color ?? '') ? group.color : 'var(--line)'}`,
+        },
         h(
-          'button',
-          {
-            type: 'button',
-            class: 'legend-item',
-            dataset: { settlement: String(s.id) },
-            onClick: (event) => callbacks.onSelect(s, event.currentTarget),
-          },
-          renderDot(s),
-          s.name
+          'ul',
+          { class: 'legend-list' },
+          group.items.map((s) =>
+            h(
+              'li',
+              {},
+              h(
+                'button',
+                {
+                  type: 'button',
+                  class: `legend-item${isPrimary(s) ? ' is-primary' : ''}`,
+                  dataset: { settlement: String(s.id) },
+                  onClick: (event) => callbacks.onSelect(s, event.currentTarget),
+                },
+                renderDot(s),
+                s.name
+              )
+            )
+          )
         )
       )
     )
   );
 
+  function markerScale() {
+    const zoom = state.scale;
+    const size = zoom < 1 ? Math.sqrt(zoom) : Math.max(0.75, Math.pow(zoom, -0.3));
+    return size / zoom;
+  }
+
   function applyTransform() {
     stage.style.transform = `translate(${state.tx}px, ${state.ty}px) scale(${state.scale})`;
+    stage.style.setProperty('--marker-scale', String(markerScale()));
     const canPan =
       stage.offsetWidth * state.scale > viewport.clientWidth + 1 ||
       stage.offsetHeight * state.scale > viewport.clientHeight + 1;
