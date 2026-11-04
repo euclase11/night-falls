@@ -1,7 +1,10 @@
-// js/tabs/other.js
 import { store } from '../store.js';
 import { matchesQuery, favoritesFirst } from '../util.js';
 import { renderEntries, renderSegmented, renderCollapsible } from '../render.js';
+
+function sortKey(entry) {
+  return entry.table === 'settlements' ? `\u2699${entry.name}` : entry.name;
+}
 
 export const otherTab = {
   id: 'other',
@@ -26,7 +29,7 @@ export const otherTab = {
       .filter((i) => i.world === state.world)
       .filter((i) => state.kind === 'all' || i.kind === state.kind)
       .filter((i) => matchesQuery(i, state.query, ['name', 'kind', 'meta', 'description', 'tags']))
-      .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+      .sort((a, b) => sortKey(a).localeCompare(sortKey(b), 'ru'));
     return favoritesFirst(sorted, favorites);
   },
 
