@@ -2458,3 +2458,54 @@ body[data-world="afterlife"] .details-lock {
 .legend-item.is-primary {
     font-weight: 600;
 }
+
+body[data-world="afterlife"] .sheet {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: var(--surface);
+    background-image: repeating-linear-gradient(0deg, transparent 0 27px, rgba(140, 47, 79, 0.05) 27px 28px);
+}
+
+body[data-world="afterlife"] .board-explore {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--paper-a);
+    border: 1px solid var(--paper-accent);
+    box-shadow: 0 2px 0 var(--paper-accent);
+    color: var(--paper-accent);
+    letter-spacing: 0.12em;
+}
+
+.skeleton-bar {
+    animation: none;
+    background: repeating-linear-gradient(90deg, var(--line) 0 9px, transparent 9px 15px);
+    opacity: 0.55;
+}
+
+body[data-world="afterlife"] .skeleton-bar {
+    background: repeating-linear-gradient(90deg, var(--line) 0 3px, transparent 3px 9px);
+}
+
+body[data-world="real"] :is(.add-form, .rt-search-card, .help-card) {
+    border: 2px solid #3a3b3e;
+    border-radius: 2px;
+    background:
+        radial-gradient(circle at 7px 7px, #8a8b92 0 1.5px, #17181a 2.5px, transparent 3px),
+        radial-gradient(circle at calc(100% - 7px) 7px, #8a8b92 0 1.5px, #17181a 2.5px, transparent 3px),
+        radial-gradient(circle at 7px calc(100% - 7px), #8a8b92 0 1.5px, #17181a 2.5px, transparent 3px),
+        radial-gradient(circle at calc(100% - 7px) calc(100% - 7px), #8a8b92 0 1.5px, #17181a 2.5px, transparent 3px),
+        var(--surface);
+    box-shadow: inset 0 0 0 1px #121214, 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+body[data-world="afterlife"] :is(.add-form, .rt-search-card, .help-card) {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    outline: 1px solid var(--line);
+    outline-offset: -6px;
+}
+
+.board-blank-icon {
+    font-size: 1.7rem;
+    line-height: 1;
+}
