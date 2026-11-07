@@ -2509,3 +2509,12 @@ body[data-world="afterlife"] :is(.add-form, .rt-search-card, .help-card) {
     font-size: 1.7rem;
     line-height: 1;
 }
+
+.map-stage {
+    will-change: auto;
+}
+
+.map-stage.is-zooming,
+.map-viewport.is-panning .map-stage {
+    will-change: transform;
+}

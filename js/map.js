@@ -59,6 +59,7 @@ export function createMapView(settlements, settings, callbacks) {
   });
   stage.append(img);
 
+  let zoomTimer = null;
   const state = {
     scale: 1,
     tx: 0,
@@ -170,6 +171,9 @@ export function createMapView(settlements, settings, callbacks) {
   }
 
   function zoomBy(factor, originX, originY) {
+    stage.classList.add('is-zooming');
+    clearTimeout(zoomTimer);
+    zoomTimer = setTimeout(() => stage.classList.remove('is-zooming'), 180);
     const ox = originX ?? viewport.clientWidth / 2;
     const oy = originY ?? viewport.clientHeight / 2;
 
